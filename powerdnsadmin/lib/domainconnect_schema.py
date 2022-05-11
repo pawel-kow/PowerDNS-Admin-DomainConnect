@@ -1,22 +1,15 @@
 from lima import fields, Schema
 
 
-'''
-{
-    "providerId": "virtucondomains.com",
-    "providerName": "Virtucon Domains",
-    "providerDisplayName": "Virtucon Domains",
-    "urlSyncUX": "https://domainconnect.virtucondomains.com",
-    "urlAsyncUX": "https://domainconnect.virtucondomains.com",
-    "urlAPI": "https://api.domainconnect.virtucondomains.com",
-    "width": 750,
-    "height": 750,
-    "urlControlPanel": "https://domaincontrolpanel.virtucondomains.com/?domain=%domain%",
-    "nameServers": ["ns01.virtucondomainsdns.com", "ns02.virtucondomainsdns.com"]
-}
-'''
-
 class DomainConnectSettingsSchema(Schema):
-    providerId = fields.String()
-    name = fields.String()
+    providerId = fields.String(key="providerId")
+    providerName = fields.String(key="providerName")
+    providerDisplayName = fields.String(key="providerDisplayName")
+    urlSyncUX = fields.String(key="urlSyncUX")
+    # urlAsyncUX = fields.String(key="urlAsyncUX") // not supported now
+    urlAPI = fields.String(key="urlAPI")
+    width = fields.Integer(key="width")
+    height = fields.Integer(key="height")
+    urlControlPanel = fields.String(key="urlControlPanel")
+
 
