@@ -143,7 +143,12 @@ def login():
     SAML_ENABLED = current_app.config.get('SAML_ENABLED')
 
     if g.user is not None and current_user.is_authenticated:
-        return redirect(url_for('dashboard.dashboard'))
+        if 'next' in session:
+            next = session['next']
+            del session['next']
+            return redirect(next)
+        else:
+            return redirect(url_for('dashboard.dashboard'))
 
     if 'google_token' in session:
         user_data = json.loads(google.get('userinfo').text)
