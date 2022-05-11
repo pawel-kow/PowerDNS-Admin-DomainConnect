@@ -9,7 +9,8 @@ ARG BUILD_DEPENDENCIES="build-base \
     python3-dev \
     xmlsec-dev \
     yarn \
-    cargo"
+    cargo \
+    git"
 
 ENV LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \
@@ -64,6 +65,9 @@ RUN mkdir -p /app && \
     cp -r /build/migrations/ /build/powerdnsadmin/ /build/run.py /app && \
     mkdir -p /app/configs && \
     cp -r /build/configs/docker_config.py /app/configs
+
+RUN git clone https://github.com/Domain-Connect/Templates.git && \
+    cp -r /build/Templates /app/DomainConnectTemplates
 
 # Build image
 FROM alpine:3.13

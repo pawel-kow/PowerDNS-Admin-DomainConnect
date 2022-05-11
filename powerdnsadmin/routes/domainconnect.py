@@ -30,6 +30,9 @@ from ..decorators import (
     is_json, can_access_domain
 )
 from flask_login import login_required
+from domainconnectzone import (
+    DomainConnect, InvalidTemplate
+)
 import secrets
 import string
 
@@ -98,6 +101,17 @@ def dc_api_settings(domain_name):
     }
 
     return jsonify(dc_settings_schema.dump(settings))
+
+@dc_api_bp.route('/domainTemplates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
+def dc_template_discovery(provider_id, service_id):
+    try:
+        #TODO: protect provider_id and service_id so that path traversal won't be possible
+        dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+    except Exception as e:
+        return jsonify({ "error": type(e).__name__, "error_message": f"{e}" }), 404
+    return jsonify(dc.data)
+
+
 
 @dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply', methods=['GET'])
 @login_required
@@ -174,12 +188,14 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, params):
         abort(500)
     records = load_records(rrsets)
 
+    dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+
     return render_template('dc_apply_step1.html',
                            domain=domain,
                            records=records,
                            current_user=current_user,
                            providerId = provider_id,
-                           providerName = provider_id, # TODO: correct from template
+                           providerName = dc.data["providerName"],
                            serviceId = service_id,
-                           serviceName = service_id, # TODO: correct from the template
+                           serviceName = dc.data["serviceName"],
                            )

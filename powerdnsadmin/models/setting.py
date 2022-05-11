@@ -193,7 +193,8 @@ class Setting(db.Model):
         'max_history_records': 1000,
         'dc_provider_id': "example.com",
         'dc_provider_name': "Example provider",
-        'dc_provider_display_name': "Example provider"
+        'dc_provider_display_name': "Example provider",
+        'dc_template_folder': "/app/DomainConnectTemplates",
     }
 
     def __init__(self, id=None, name=None, value=None):
