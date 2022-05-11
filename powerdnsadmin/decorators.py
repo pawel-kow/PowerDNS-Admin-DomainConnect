@@ -58,13 +58,16 @@ def can_access_domain(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        domain_name = kwargs.get("domain_name")
+        current_app.logger.warn(f'?? can_access_domain name: {domain_name}')
+        domain = Domain.query.filter(Domain.name == domain_name).first()
+
+        current_app.logger.warn(f'?? can_access_domain obj: {domain}')
+
+        if not domain:
+            abort(404)
+
         if current_user.role.name not in ['Administrator', 'Operator']:
-            domain_name = kwargs.get('domain_name')
-            domain = Domain.query.filter(Domain.name == domain_name).first()
-
-            if not domain:
-                abort(404)
-
             valid_access = Domain(id=domain.id).is_valid_access(
                 current_user.id)
 
