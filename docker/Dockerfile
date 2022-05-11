@@ -71,7 +71,7 @@ FROM alpine:3.13
 ENV FLASK_APP=/app/powerdnsadmin/__init__.py \
     USER=pda
 
-RUN apk add --no-cache mariadb-connector-c postgresql-client py3-gunicorn py3-psycopg2 xmlsec tzdata libcap && \
+RUN apk add --no-cache dos2unix mariadb-connector-c postgresql-client py3-gunicorn py3-psycopg2 xmlsec tzdata libcap && \
     addgroup -S ${USER} && \
     adduser -S -D -G ${USER} ${USER} && \
     mkdir /data && \
@@ -83,6 +83,7 @@ COPY --from=builder /usr/bin/flask /usr/bin/
 COPY --from=builder /usr/lib/python3.8/site-packages /usr/lib/python3.8/site-packages/
 COPY --from=builder --chown=root:${USER} /app /app/
 COPY ./docker/entrypoint.sh /usr/bin/
+RUN dos2unix /usr/bin/entrypoint.sh
 
 WORKDIR /app
 RUN chown ${USER}:${USER} ./configs /app && \
