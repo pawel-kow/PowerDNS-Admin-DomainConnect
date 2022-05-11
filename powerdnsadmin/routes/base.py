@@ -12,7 +12,7 @@ def handle_bad_request(e):
 
 
 def handle_unauthorized_access(e):
-    session['next'] = request.script_root + request.path
+    session['next'] = request.url
     return redirect(url_for('index.login'))
 
 
