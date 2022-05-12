@@ -41,7 +41,7 @@ from flask_wtf.csrf import generate_csrf, validate_csrf
 import secrets
 import string
 
-dc_api_bp = Blueprint('domainconnect', __name__, url_prefix='/dc/v2')
+dc_api_bp = Blueprint('domainconnect', __name__, url_prefix='/dc')
 
 dc_settings_schema = DomainConnectSettingsSchema()
 
@@ -84,7 +84,7 @@ def dc_api_root():
 def dc_sync_ux_root():
     return jsonify({}), 404
 
-@dc_api_bp.route('/<string:domain_name>/settings', methods=['GET'])
+@dc_api_bp.route('/v2/<string:domain_name>/settings', methods=['GET'])
 def dc_api_settings(domain_name):
     current_app.logger.debug(f'/settings for {domain_name}')
     domain = db.session.query(Domain).filter(Domain.name == domain_name).first()
@@ -107,7 +107,7 @@ def dc_api_settings(domain_name):
 
     return jsonify(dc_settings_schema.dump(settings))
 
-@dc_api_bp.route('/domainTemplates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
+@dc_api_bp.route('/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
 def dc_template_discovery(provider_id, service_id):
     try:
         #TODO: protect provider_id and service_id so that path traversal won't be possible
