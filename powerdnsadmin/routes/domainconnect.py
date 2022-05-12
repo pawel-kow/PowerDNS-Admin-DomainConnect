@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 from base64 import b64encode
 from flask import (
     Blueprint, g, request, abort, current_app, make_response, jsonify,
-    url_for, render_template
+    url_for, render_template, redirect
 )
 from flask_login import current_user
 
@@ -15,6 +15,8 @@ from ..lib import utils, helper
 from ..lib.domainconnect_schema import (
     DomainConnectSettingsSchema,
 )
+from ..lib.dc_utils import *
+
 from distutils.version import StrictVersion
 
 from ..lib.errors import (
@@ -33,6 +35,9 @@ from flask_login import login_required
 from domainconnectzone import (
     DomainConnect, InvalidTemplate
 )
+
+from flask_wtf.csrf import generate_csrf, validate_csrf
+
 import secrets
 import string
 
@@ -119,9 +124,9 @@ def dc_sync_ux_apply(provider_id, service_id):
     domain_name = request.args.get('domain')
     host = request.args.get('host')
     params = dict(request.args)
-    params['fqdn'] = domain_name if host is None else f"{host}.{domain_name}"
+    # params['fqdn'] = domain_name if host is None else f"{host}.{domain_name}"
     current_app.logger.debug(f"Apply args: {params}")
-    return dc_sync_ux_apply_do(provider_id, service_id, domain_name=domain_name, params=params)
+    return dc_sync_ux_apply_do(provider_id, service_id, domain_name=domain_name, host=host, params=params)
 
 def load_records(rrsets):
     records = []
@@ -174,7 +179,7 @@ def load_records(rrsets):
 
 
 @can_access_domain
-def dc_sync_ux_apply_do(provider_id, service_id, domain_name, params):
+def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     current_app.logger.debug(f'dc_sync_ux_apply_do {provider_id} {service_id} {domain_name} {params}')
     
     domain = Domain.query.filter(Domain.name == domain_name).first()
@@ -184,11 +189,27 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, params):
     # Query domain's rrsets from PowerDNS API
     rrsets = Record().get_rrsets(domain.name)
     # API server might be down, misconfigured
-    if not rrsets and domain.type != 'Slave':
+    if not rrsets:
         abort(500)
     records = load_records(rrsets)
+    dc_records = transform_records_to_dc_format(domain_name, records)
+    current_app.logger.debug(f'transformed RRs: {dc_records}')
 
     dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+    dc_error = None
+    dc_apply_result = None
+    try:
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params)
+        current_app.logger.debug(f'template apply result: {dc_apply_result}')
+        dc_apply_result = (
+            transform_records_to_pdns_format(domain_name, dc_apply_result[0]),
+            transform_records_to_pdns_format(domain_name, dc_apply_result[1]),
+            transform_records_to_pdns_format(domain_name, dc_apply_result[2]),
+        )
+        current_app.logger.debug(f'template apply result after transform to pdns: {dc_apply_result}')
+    except Exception as e:
+        dc_error = f'[{type(e).__name__}] {e}'
+
 
     return render_template('dc_apply_step1.html',
                            domain=domain,
@@ -198,4 +219,77 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, params):
                            providerName = dc.data["providerName"],
                            serviceId = service_id,
                            serviceName = dc.data["serviceName"],
+                           dc_error = dc_error,
+                           dc_add_records = dc_apply_result[0] if dc_apply_result is not None else None,
+                           dc_delete_records = dc_apply_result[1] if dc_apply_result is not None else None,
+                           dc_final_zone = dc_apply_result[2] if dc_apply_result is not None else None,
+                           dc_finalize_link = url_for('domainconnect.dc_sync_ux_apply_finalize', provider_id = provider_id,
+                                service_id = service_id,  **{**params, **{"_csrf": generate_csrf() }})
+                           )
+
+@dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply-finalize', methods=['GET'])
+@login_required
+def dc_sync_ux_apply_finalize(provider_id, service_id):
+    domain_name = request.args.get('domain')
+    host = request.args.get('host')
+    csrf = request.args.get('_csrf')
+    current_app.logger.debug(f"csrf: {csrf}")
+    params = dict(request.args)
+    del params['_csrf']
+    try:
+        validate_csrf(csrf)
+    except:
+        return redirect(url_for('domainconnect.dc_sync_ux_apply', provider_id = provider_id,
+                                service_id = service_id,  **params))
+    return dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name=domain_name, host=host, params=params)
+
+@can_access_domain
+def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, params):
+    current_app.logger.debug(f'dc_sync_ux_apply_do_finalize {provider_id} {service_id} {domain_name} {params}')
+
+    domain = Domain.query.filter(Domain.name == domain_name).first()
+    if not domain:
+        abort(404)
+
+    # Query domain's rrsets from PowerDNS API
+    rrsets = Record().get_rrsets(domain.name)
+    # API server might be down, misconfigured
+    if not rrsets:
+        abort(500)
+    records = load_records(rrsets)
+    dc_records = transform_records_to_dc_format(domain_name, records)
+    current_app.logger.debug(f'transformed RRs: {dc_records}')
+
+    dc_error = None
+    dc_apply_result = None
+    try:
+        dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params)
+        current_app.logger.debug(f'template apply result: {dc_apply_result}')
+        dc_apply_result = (
+            transform_records_to_pdns_format(domain_name, dc_apply_result[0]),
+            transform_records_to_pdns_format(domain_name, dc_apply_result[1]),
+            transform_records_to_pdns_format(domain_name, dc_apply_result[2]),
+        )
+        current_app.logger.debug(f'template apply result after transform to pdns: {dc_apply_result}')
+        apply_dc_template_to_zone(domain_name, dc_apply_result, provider_id,
+            service_id, host, current_user.username, domain.id)
+        rrsets = Record().get_rrsets(domain.name)
+        records = load_records(rrsets)
+    except Exception as e:
+        dc_error = f'[{type(e).__name__}] {e}'
+
+    return render_template('dc_apply_step2.html',
+                           domain=domain,
+                           records=records,
+                           current_user=current_user,
+                           providerId = provider_id,
+                           providerName = dc.data["providerName"],
+                           serviceId = service_id,
+                           serviceName = dc.data["serviceName"],
+                           dc_error = dc_error,
+                           dc_redirect_link = add_query_params(
+                                params["redirect_uri"], 
+                                dict(filter(lambda val: val[0] == "state", params.items()))
+                               ) if "redirect_uri" in params else None
                            )
