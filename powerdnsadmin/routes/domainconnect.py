@@ -33,7 +33,7 @@ from ..decorators import (
 )
 from flask_login import login_required
 from domainconnectzone import (
-    DomainConnect, InvalidTemplate
+    DomainConnect, InvalidTemplate, qsfilter
 )
 
 from flask_wtf.csrf import generate_csrf, validate_csrf
@@ -177,6 +177,12 @@ def load_records(rrsets):
         # Unsupported version
         abort(500)
 
+def get_signature_params(params):
+    return {
+        "sig": params.get('sig', None),
+        "key": params.get('key', None),
+        "qs": qsfilter(request.query_string.decode('utf8'), ['sig', 'key', '_csrf'])
+    }
 
 @can_access_domain
 def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
@@ -185,6 +191,8 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     domain = Domain.query.filter(Domain.name == domain_name).first()
     if not domain:
         abort(404)
+
+    sigparams = get_signature_params(params)
 
     # Query domain's rrsets from PowerDNS API
     rrsets = Record().get_rrsets(domain.name)
@@ -196,10 +204,11 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     current_app.logger.debug(f'transformed RRs: {dc_records}')
 
     dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+
     dc_error = None
     dc_apply_result = None
     try:
-        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params)
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params, **sigparams)
         current_app.logger.debug(f'template apply result: {dc_apply_result}')
         dc_apply_result = (
             transform_records_to_pdns_format(domain_name, dc_apply_result[0]),
@@ -235,6 +244,7 @@ def dc_sync_ux_apply_finalize(provider_id, service_id):
     csrf = request.args.get('_csrf')
     current_app.logger.debug(f"csrf: {csrf}")
     params = dict(request.args)
+
     del params['_csrf']
     try:
         validate_csrf(csrf)
@@ -250,6 +260,8 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
     domain = Domain.query.filter(Domain.name == domain_name).first()
     if not domain:
         abort(404)
+    
+    sigparams = get_signature_params(params)
 
     # Query domain's rrsets from PowerDNS API
     rrsets = Record().get_rrsets(domain.name)
@@ -264,7 +276,7 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
     dc_apply_result = None
     try:
         dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
-        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params)
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params, **sigparams)
         current_app.logger.debug(f'template apply result: {dc_apply_result}')
         dc_apply_result = (
             transform_records_to_pdns_format(domain_name, dc_apply_result[0]),
