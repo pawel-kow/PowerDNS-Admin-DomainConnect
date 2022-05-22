@@ -66,7 +66,12 @@ def transform_record_to_dc_format(domain, record):
             ret["data"] = mxregex.group(2)
     else:
         ret["data"] = record.data
-    #TODO: convert comments to _dc dict entries
+    try:
+        ret["_dc"] = json.loads(record.comment)
+        if "_dc" in ret and ret["_dc"] is None:
+            del ret["_dc"]
+    except JSONDecodeError:
+        pass
     return ret
 
 
@@ -93,6 +98,7 @@ def transform_record_to_pdns_format(domain_name, record):
         and not record["data"].startswith('"') \
         and not record["data"].endswith('"'):
         ret["data"] = f'"{record["data"]}"'
+    ret["comment"] = record.get("_dc", None)
     return ret
 
 
@@ -119,7 +125,8 @@ def apply_dc_template_to_zone(domain_name, dc_output, provider_id,
                 "record_type": x["type"],
                 "record_status": "Active",
                 "record_ttl": f'{x["ttl"]}',
-                "record_data": x["data"]
+                "record_data": x["data"],
+                "record_comment": json.dumps(x["comment"]),
             } for x in dc_output[2]
         ]
         current_app.logger.debug(f'RRs to save: {submitted_record}')

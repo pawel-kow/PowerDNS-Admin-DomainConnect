@@ -208,7 +208,11 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     dc_error = None
     dc_apply_result = None
     try:
-        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params, **sigparams)
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host,
+            params, **sigparams,
+            ignore_signature=params.get("_skipsig", "false") == "true",
+            group_ids = params.get("groupId", None),
+            multi_aware=True)
         current_app.logger.debug(f'template apply result: {dc_apply_result}')
         dc_apply_result = (
             transform_records_to_pdns_format(domain_name, dc_apply_result[0]),
@@ -276,7 +280,10 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
     dc_apply_result = None
     try:
         dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
-        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params, **sigparams)
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params,
+            **sigparams, group_ids = params.get("groupId", None),
+            ignore_signature=params.get("_skipsig", "false") == "true",
+            multi_aware=True)
         current_app.logger.debug(f'template apply result: {dc_apply_result}')
         dc_apply_result = (
             transform_records_to_pdns_format(domain_name, dc_apply_result[0]),

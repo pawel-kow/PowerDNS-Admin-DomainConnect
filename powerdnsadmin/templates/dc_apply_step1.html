@@ -89,6 +89,7 @@
                                     <th>Type</th>
                                     <th>TTL</th>
                                     <th>Data</th>
+                                    <th>Comment</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -105,6 +106,9 @@
                                         </td>
                                         <td>
                                             {{ record.data }}
+                                        </td>
+                                        <td>
+                                            {{ record.comment }}
                                         </td>
                                     </tr>
                                     {% endfor %}
