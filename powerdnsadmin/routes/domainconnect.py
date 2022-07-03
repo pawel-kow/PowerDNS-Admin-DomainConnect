@@ -33,7 +33,7 @@ from ..decorators import (
 )
 from flask_login import login_required
 from domainconnectzone import (
-    DomainConnect, InvalidTemplate
+    DomainConnect, InvalidTemplate, DomainConnectTemplates
 )
 
 from flask_wtf.csrf import generate_csrf, validate_csrf
@@ -293,3 +293,12 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
                                 dict(filter(lambda val: val[0] == "state", params.items()))
                                ) if "redirect_uri" in params else None
                            )
+
+
+@dc_api_bp.route('/admin/templates', methods=['GET', 'POST'])
+@dc_api_bp.route('/admin/templates/list', methods=['GET', 'POST'])
+@login_required
+def templates():
+    templates = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+    return render_template('dc_template.html', templates=templates.templates)
+
