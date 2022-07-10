@@ -52,6 +52,19 @@ This creates a volume called `pda-data` to persist the SQLite database with the 
 
 You can then access PowerDNS-Admin by pointing your browser to http://localhost:9191.
 
+### Development
+#### Install on Mac
+
+1. Create virtualenv
+2. Install all needed dev libraries:
+```commandline
+brew install mqsql-connector-c
+export PATH="/usr/local/opt/mysql-client/bin:$PATH"
+brew install Libxmlsec1
+pip install -r requirements.txt
+```
+
+
 ## Screenshots
 ![dashboard](https://user-images.githubusercontent.com/6447444/44068603-0d2d81f6-9fa5-11e8-83af-14e2ad79e370.png)
 
