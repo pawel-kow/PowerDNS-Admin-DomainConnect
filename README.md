@@ -66,12 +66,8 @@ brew install node
 brew install yarn
 change default config to add SQLLite and change bind IP address
 export FLASK_APP=run.py
-flask db migrate
 flask db upgrade
 yarn install
-sqlite3 powerdnsadmin/pdns.db
-  > insert into role (name) values ("User");
-  > insert into role (name) values ("Administrator");
 ```
 
 
