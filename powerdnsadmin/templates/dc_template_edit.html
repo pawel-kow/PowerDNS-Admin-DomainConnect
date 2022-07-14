@@ -23,7 +23,7 @@
         <div class="col-xs-12">
             <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Manage Template Records for {{ template.providerId }} / {{ template.service  Id}}</h3>
+                    <h3 class="box-title">Manage Template Records for {{ template.providerId }} / {{ template.serviceId}}</h3>
                 </div>
                 <div class="box-body">
                     <button type="button" class="btn btn-flat btn-primary pull-right button_apply_changes" id="{{ template.providerId }}.{{ template.serviceId }}">
@@ -31,9 +31,7 @@
                     </button>
                 </div>
                 <div class="box-body">
-                    <textarea>
-                        {{ template | tojson}}
-                    </textarea>
+                    <div id="jsoneditor"></div>
                 </div>
             </div>
         </div>
@@ -41,6 +39,37 @@
 </section>
 {% endblock %}
 {% block extrascripts %}
+<script type="module">
+      import { createAjvValidator, JSONEditor } from '{{ url_for('static', filename='node_modules/vanilla-jsoneditor/index.js') }}'
+
+      var schema = $.getJSON('https://raw.githubusercontent.com/Domain-Connect/Templates/master/template.schema', function(data) {
+        console.log(data);
+        // some hacks to make the schema working fine with avj
+        delete data.$schema;
+        delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-protocols'];
+        delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-extensions'];
+        data.definitions.TTL.anyOf[0].type = "number";
+        delete data.definitions.TTL.anyOf[1].format;
+        var obj = {};
+        // pretty formatting JSON
+        obj.text = JSON.stringify(JSON.parse('{{ template | tojson}}'), null, 2);
+
+        // create the editor
+        const editor = new JSONEditor({
+          target: document.getElementById('jsoneditor'),
+          props: {
+            validator: createAjvValidator(data),
+            mode: "text",
+            indentation: 2,
+            mainMenuBar: false,
+            navigationBar: false
+          }
+        });
+        editor.set(obj);
+      });
+
+
+</script>
 <script>
     // superglobals
     window.nEditing = null;
