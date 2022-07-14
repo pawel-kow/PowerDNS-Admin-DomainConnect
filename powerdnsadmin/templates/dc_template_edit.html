@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% set active_page = "admin_domain_template" %}
+{% block title %}<title>Edit Template - {{ SITE_NAME }}</title>{% endblock %}
+
+{% block dashboard_stat %}
+<section class="content-header">
+    <h1>
+        Edit Domain Connect template <small>{{ template.providerId }} / {{ template.serviceId }}</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="{{ url_for('dashboard.dashboard') }}"><i
+                class="fa fa-dashboard"></i> Home</a></li>
+        <li>Domain Connect Templates</li>
+        <li>{{ template.providerId }}</li>
+        <li class="active">{{ template.serviceId }}</li>
+    </ol>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="content">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="box">
+                <div class="box-header">
+                    <h3 class="box-title">Manage Template Records for {{ template.providerId }} / {{ template.service  Id}}</h3>
+                </div>
+                <div class="box-body">
+                    <button type="button" class="btn btn-flat btn-primary pull-right button_apply_changes" id="{{ template.providerId }}.{{ template.serviceId }}">
+                        Apply Changes&nbsp;<i class="fa fa-floppy-o"></i>
+                    </button>
+                </div>
+                <div class="box-body">
+                    <textarea>
+                        {{ template | tojson}}
+                    </textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block extrascripts %}
+<script>
+    // superglobals
+    window.nEditing = null;
+    window.nNew = false;
+
+    // handle apply changes button
+    $(document.body).on("click",".button_apply_changes", function() {
+        if (nNew || nEditing) {
+            var modal = $("#modal_error");
+            modal.find('.modal-body p').text("Previous record not saved. Please save it before applying the changes.");
+            modal.modal('show');
+            return;
+        }
+
+        var modal = $("#modal_apply_changes");
+        var table = $("#tbl_records").DataTable();
+        var template = $(this).prop('id');
+        var info = "Are you sure you want to apply your changes?";
+        modal.find('.modal-body p').text(info);
+
+        // following unbind("click") is to avoid multiple times execution
+        modal.find('#button_apply_confirm').unbind("click").click(function() {
+            var data = getTableData(table);
+            applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'records': data}, $SCRIPT_ROOT + '/admin/template/' + template + '/apply', true);
+            modal.modal('hide');
+        })
+        modal.modal('show');
+
+    });
+
+    //handle save button
+    $(document.body).on("click", ".button_save", function (e) {
+            e.stopPropagation();
+            var table = $("#tbl_records").DataTable();
+            saveRow(table, nEditing);
+            nEditing = null;
+            nNew = false;
+        });
+
+</script>
+{% endblock %}
+{% block modals %}
+<div class="modal fade modal-warning" id="modal_delete">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"
+                    aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Confirmation</h4>
+            </div>
+            <div class="modal-body">
+                <p></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-flat btn-default pull-left" id="button_delete_cancel"
+                    data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-flat btn-danger" id="button_delete_confirm">Delete</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<div class="modal fade modal-primary" id="modal_apply_changes">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"
+                    aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Confirmation</h4>
+            </div>
+            <div class="modal-body">
+                <p></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-flat btn-default pull-left"
+                    data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-flat btn-primary" id="button_apply_confirm">Apply</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+{% endblock %}

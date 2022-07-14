@@ -302,3 +302,9 @@ def templates():
     templates = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
     return render_template('dc_template.html', templates=templates.templates)
 
+
+@dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET', 'POST'])
+@login_required
+def template_edit(provider_id, service_id):
+    dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
+    return render_template('dc_template_edit.html', template=dc.data)

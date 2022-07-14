@@ -73,7 +73,7 @@
                   {{ template.template.records|count }}
                 </td>
                 <td>
-                  <a href="{{ url_for('admin.edit_template', template=template.fileName) }}">
+                  <a href="{{ url_for('domainconnect.template_edit', provider_id=template.providerId, service_id=template.serviceId) }}">
                     <button type="button" class="btn btn-flat btn-warning button_edit" id="btn_edit">
                       Edit&nbsp;<i class="fa fa-edit"></i>
                     </button>
