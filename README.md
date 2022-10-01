@@ -58,7 +58,7 @@ You can then access PowerDNS-Admin by pointing your browser to http://localhost:
 1. Create virtualenv
 2. Install all needed dev libraries:
 ```commandline
-brew install mqsql-connector-c
+brew install mysql-connector-c
 export PATH="/usr/local/opt/mysql-client/bin:$PATH"
 brew install Libxmlsec1
 pip install -r requirements.txt

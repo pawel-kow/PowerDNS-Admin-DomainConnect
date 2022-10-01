@@ -5,7 +5,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 ### BASIC APP CONFIG
 SALT = '$2b$12$yLUMTIfl21FKJQpTkRQXCu'
 SECRET_KEY = 'e951e5a1f4b94151b360f47edf596dd2'
-BIND_ADDRESS = '0.0.0.0'
+BIND_ADDRESS = '127.0.0.1'
 PORT = 9191
 HSTS_ENABLED = False
 OFFLINE_MODE = False
@@ -18,16 +18,16 @@ SQLA_DB_HOST = '127.0.0.1'
 SQLA_DB_NAME = 'pda'
 SQLALCHEMY_TRACK_MODIFICATIONS = True
 
-### DATABASE - MySQL
-SQLALCHEMY_DATABASE_URI = 'mysql://{}:{}@{}/{}'.format(
-    urllib.parse.quote_plus(SQLA_DB_USER),
-    urllib.parse.quote_plus(SQLA_DB_PASSWORD),
-    SQLA_DB_HOST,
-    SQLA_DB_NAME
-)
+# ### DATABASE - MySQL
+# SQLALCHEMY_DATABASE_URI = 'mysql://{}:{}@{}/{}'.format(
+#     urllib.parse.quote_plus(SQLA_DB_USER),
+#     urllib.parse.quote_plus(SQLA_DB_PASSWORD),
+#     SQLA_DB_HOST,
+#     SQLA_DB_NAME
+# )
 
 ### DATABASE - SQLite
-# SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'pdns.db')
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'pdns.db')
 
 # SAML Authnetication
 SAML_ENABLED = False

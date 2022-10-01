@@ -42,6 +42,8 @@
 <script type="module">
       import { createAjvValidator, JSONEditor } from '{{ url_for('static', filename='node_modules/vanilla-jsoneditor/index.js') }}'
 
+      window.editor = null;
+
       var schema = $.getJSON('https://raw.githubusercontent.com/Domain-Connect/Templates/master/template.schema', function(data) {
         console.log(data);
         // some hacks to make the schema working fine with avj
@@ -55,7 +57,7 @@
         obj.text = JSON.stringify(JSON.parse('{{ template | tojson}}'), null, 2);
 
         // create the editor
-        const editor = new JSONEditor({
+        window.editor = new JSONEditor({
           target: document.getElementById('jsoneditor'),
           props: {
             validator: createAjvValidator(data),
@@ -65,7 +67,7 @@
             navigationBar: false
           }
         });
-        editor.set(obj);
+        window.editor.set(obj);
       });
 
 
@@ -85,30 +87,18 @@
         }
 
         var modal = $("#modal_apply_changes");
-        var table = $("#tbl_records").DataTable();
         var template = $(this).prop('id');
         var info = "Are you sure you want to apply your changes?";
         modal.find('.modal-body p').text(info);
 
         // following unbind("click") is to avoid multiple times execution
         modal.find('#button_apply_confirm').unbind("click").click(function() {
-            var data = getTableData(table);
-            applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'records': data}, $SCRIPT_ROOT + '/admin/template/' + template + '/apply', true);
+            const content = JSON.parse(window.editor.get().text);
+            applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'template': content}, $SCRIPT_ROOT + '{{ template.serviceId }}/apply', true);
             modal.modal('hide');
         })
         modal.modal('show');
-
     });
-
-    //handle save button
-    $(document.body).on("click", ".button_save", function (e) {
-            e.stopPropagation();
-            var table = $("#tbl_records").DataTable();
-            saveRow(table, nEditing);
-            nEditing = null;
-            nNew = false;
-        });
-
 </script>
 {% endblock %}
 {% block modals %}

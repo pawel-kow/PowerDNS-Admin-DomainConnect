@@ -308,3 +308,20 @@ def templates():
 def template_edit(provider_id, service_id):
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
     return render_template('dc_template_edit.html', template=dc.data)
+
+
+@dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/apply', methods=['POST'])
+@login_required
+@is_json
+def template_save(provider_id, service_id, *args, **kwargs):
+    templ = request.json["template"]
+    if templ['providerId'] != provider_id or templ['serviceId'] != service_id:
+        return jsonify({"msg": f"ProviderId/ServiceId mismatch. Should have been: {provider_id} / {service_id}; was {templ['providerId']} / {templ['serviceId']}"}), 403
+
+    current_app.logger.info(f'Template to save: {templ}')
+    templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+    try:
+        templlist.update_template(templ)
+        return jsonify({"msg": f"Template {provider_id} / {service_id} saved successfully."}), 201
+    except Exception as e:
+        return jsonify({"msg": f"{e}"}), 500
