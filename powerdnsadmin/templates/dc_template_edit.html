@@ -76,6 +76,7 @@
     // superglobals
     window.nEditing = null;
     window.nNew = false;
+    window.nNewEntry = {{ new | lower }};
 
     // handle apply changes button
     $(document.body).on("click",".button_apply_changes", function() {
@@ -94,7 +95,13 @@
         // following unbind("click") is to avoid multiple times execution
         modal.find('#button_apply_confirm').unbind("click").click(function() {
             const content = JSON.parse(window.editor.get().text);
-            applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'template': content}, $SCRIPT_ROOT + '{{ template.serviceId }}/apply', true);
+            if (window.nNewEntry) {
+                applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'template': content}, $SCRIPT_ROOT + '{{ template.serviceId }}/save', true);
+            }
+            else {
+                applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'template': content},
+                    '{{ url_for('domainconnect.template_save_new') }}', true);
+            }
             modal.modal('hide');
         })
         modal.modal('show');

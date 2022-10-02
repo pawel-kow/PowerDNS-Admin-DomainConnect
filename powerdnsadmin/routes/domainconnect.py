@@ -307,13 +307,102 @@ def templates():
 @login_required
 def template_edit(provider_id, service_id):
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
-    return render_template('dc_template_edit.html', template=dc.data)
+    return render_template('dc_template_edit.html', new=False, template=dc.data)
 
 
-@dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/apply', methods=['POST'])
+@dc_api_bp.route('/admin/templates/new', methods=['GET', 'POST'])
+@login_required
+def template_new():
+    return render_template('dc_template_edit.html', new=True, template=
+        {
+            "providerId": "<Enter providerId>",
+            "providerName": "<Enter providerName>",
+            "serviceId": "<Enter serviceId>",
+            "serviceName": "<Enter serviceName>",
+            "version": 1,
+            "logoUrl": "<Enter logoUrl>",
+            "description": "<Enter description>",
+            "variableDescription": "<Enter variableDescription>",
+            "syncBlock": False,
+            "syncPubKeyDomain": "<Enter syncPubKeyDomain>",
+            "syncRedirectDomain": "<Enter syncRedirectDomain>",
+            "warnPhishing": True,
+            "hostRequired": False,
+            "records": [
+                {
+                    "type": "A",
+                    "host": "@",
+                    "pointsTo": "1.1.1.1",
+                    "ttl": 3600
+                },
+                {
+                    "type": "A",
+                    "host": "@",
+                    "pointsTo": "%a%",
+                    "ttl": 3600
+                },
+                {
+                    "type": "CNAME",
+                    "host": "www",
+                    "pointsTo": "@",
+                    "ttl": 3600
+                },
+                {
+                    "type": "CNAME",
+                    "host": "sub",
+                    "pointsTo": "%sub%.mydomain.com",
+                    "ttl": 3600
+                },
+                {
+                    "type": "CNAME",
+                    "host": "%cnamehost%",
+                    "pointsTo": "%sub%.mydomain.com",
+                    "ttl": 3600
+                },
+                {
+                    "type": "TXT",
+                    "host": "@",
+                    "data": "%txt%",
+                    "ttl": 3600
+                },
+                {
+                    "type": "SPFM",
+                    "host": "@",
+                    "spfRules": "include:spf.mydomain.com"
+                },
+                {
+                    "type": "MX",
+                    "host": "@",
+                    "pointsTo": "1.1.1.2",
+                    "priority": "0",
+                    "ttl": 3600
+                },
+                {
+                    "type": "MX",
+                    "host": "@",
+                    "pointsTo": "%mx%",
+                    "priority": "0",
+                    "ttl": 3600
+                },
+                {
+                    "type": "SRV",
+                    "service": "_sip",
+                    "protocol": "_tls",
+                    "port": "443",
+                    "weight": "20",
+                    "priority": "10",
+                    "name": "@",
+                    "target": "%target%",
+                    "ttl": 3600
+                }
+            ]
+        })
+
+
+@dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/save', methods=['POST'])
 @login_required
 @is_json
-def template_save(provider_id, service_id, *args, **kwargs):
+def template_save(provider_id, service_id):
     templ = request.json["template"]
     if templ['providerId'] != provider_id or templ['serviceId'] != service_id:
         return jsonify({"msg": f"ProviderId/ServiceId mismatch. Should have been: {provider_id} / {service_id}; was {templ['providerId']} / {templ['serviceId']}"}), 403
@@ -323,5 +412,21 @@ def template_save(provider_id, service_id, *args, **kwargs):
     try:
         templlist.update_template(templ)
         return jsonify({"msg": f"Template {provider_id} / {service_id} saved successfully."}), 201
+    except Exception as e:
+        return jsonify({"msg": f"{e}"}), 500
+
+@dc_api_bp.route('/admin/templates/new/save', methods=['POST'])
+@login_required
+@is_json
+def template_save_new():
+    templ = request.json["template"]
+
+    current_app.logger.info(f'Template to save: {templ}')
+    templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+    try:
+        templlist.create_template(templ)
+        return jsonify({"msg": f"Template {templ['providerId']} / {templ['serviceId']} saved successfully.",
+                        "nextUrl": url_for("domainconnect.template_edit", provider_id=templ['providerId'],
+                                           service_id=templ['service_id'])}), 201
     except Exception as e:
         return jsonify({"msg": f"{e}"}), 500
