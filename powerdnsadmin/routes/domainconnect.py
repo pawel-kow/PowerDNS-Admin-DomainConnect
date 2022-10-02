@@ -427,6 +427,6 @@ def template_save_new():
         templlist.create_template(templ)
         return jsonify({"msg": f"Template {templ['providerId']} / {templ['serviceId']} saved successfully.",
                         "nextUrl": url_for("domainconnect.template_edit", provider_id=templ['providerId'],
-                                           service_id=templ['service_id'])}), 201
+                                           service_id=templ['serviceId'])}), 201
     except Exception as e:
         return jsonify({"msg": f"{e}"}), 500

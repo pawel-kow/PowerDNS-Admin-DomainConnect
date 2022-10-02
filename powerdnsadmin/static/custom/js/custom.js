@@ -24,7 +24,7 @@ function applyChanges(data, url, showResult, refreshPage) {
                 location.reload(true);
             }
             if (data['nextUrl']) {
-                location.url.href = data['nextUrl'];
+                window.location.href = data['nextUrl'];
             }
         },
 

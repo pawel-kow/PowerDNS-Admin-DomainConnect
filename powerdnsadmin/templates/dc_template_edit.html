@@ -95,7 +95,7 @@
         // following unbind("click") is to avoid multiple times execution
         modal.find('#button_apply_confirm').unbind("click").click(function() {
             const content = JSON.parse(window.editor.get().text);
-            if (window.nNewEntry) {
+            if (window.nNewEntry === false) {
                 applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'template': content}, $SCRIPT_ROOT + '{{ template.serviceId }}/save', true);
             }
             else {
