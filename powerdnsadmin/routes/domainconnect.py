@@ -307,96 +307,100 @@ def templates():
 @login_required
 def template_edit(provider_id, service_id):
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
-    return render_template('dc_template_edit.html', new=False, template=dc.data)
+    templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+    return render_template('dc_template_edit.html', new=False, template=dc.data,
+                           params=templlist.get_variable_names(dc.data))
 
 
 @dc_api_bp.route('/admin/templates/new', methods=['GET', 'POST'])
 @login_required
 def template_new():
-    return render_template('dc_template_edit.html', new=True, template=
-        {
-            "providerId": "<Enter providerId>",
-            "providerName": "<Enter providerName>",
-            "serviceId": "<Enter serviceId>",
-            "serviceName": "<Enter serviceName>",
-            "version": 1,
-            "logoUrl": "<Enter logoUrl>",
-            "description": "<Enter description>",
-            "variableDescription": "<Enter variableDescription>",
-            "syncBlock": False,
-            "syncPubKeyDomain": "<Enter syncPubKeyDomain>",
-            "syncRedirectDomain": "<Enter syncRedirectDomain>",
-            "warnPhishing": True,
-            "hostRequired": False,
-            "records": [
-                {
-                    "type": "A",
-                    "host": "@",
-                    "pointsTo": "1.1.1.1",
-                    "ttl": 3600
-                },
-                {
-                    "type": "A",
-                    "host": "@",
-                    "pointsTo": "%a%",
-                    "ttl": 3600
-                },
-                {
-                    "type": "CNAME",
-                    "host": "www",
-                    "pointsTo": "@",
-                    "ttl": 3600
-                },
-                {
-                    "type": "CNAME",
-                    "host": "sub",
-                    "pointsTo": "%sub%.mydomain.com",
-                    "ttl": 3600
-                },
-                {
-                    "type": "CNAME",
-                    "host": "%cnamehost%",
-                    "pointsTo": "%sub%.mydomain.com",
-                    "ttl": 3600
-                },
-                {
-                    "type": "TXT",
-                    "host": "@",
-                    "data": "%txt%",
-                    "ttl": 3600
-                },
-                {
-                    "type": "SPFM",
-                    "host": "@",
-                    "spfRules": "include:spf.mydomain.com"
-                },
-                {
-                    "type": "MX",
-                    "host": "@",
-                    "pointsTo": "1.1.1.2",
-                    "priority": "0",
-                    "ttl": 3600
-                },
-                {
-                    "type": "MX",
-                    "host": "@",
-                    "pointsTo": "%mx%",
-                    "priority": "0",
-                    "ttl": 3600
-                },
-                {
-                    "type": "SRV",
-                    "service": "_sip",
-                    "protocol": "_tls",
-                    "port": "443",
-                    "weight": "20",
-                    "priority": "10",
-                    "name": "@",
-                    "target": "%target%",
-                    "ttl": 3600
-                }
-            ]
-        })
+    template = {
+        "providerId": "<Enter providerId>",
+        "providerName": "<Enter providerName>",
+        "serviceId": "<Enter serviceId>",
+        "serviceName": "<Enter serviceName>",
+        "version": 1,
+        "logoUrl": "<Enter logoUrl>",
+        "description": "<Enter description>",
+        "variableDescription": "<Enter variableDescription>",
+        "syncBlock": False,
+        "syncPubKeyDomain": "<Enter syncPubKeyDomain>",
+        "syncRedirectDomain": "<Enter syncRedirectDomain>",
+        "warnPhishing": True,
+        "hostRequired": False,
+        "records": [
+            {
+                "type": "A",
+                "host": "@",
+                "pointsTo": "1.1.1.1",
+                "ttl": 3600
+            },
+            {
+                "type": "A",
+                "host": "@",
+                "pointsTo": "%a%",
+                "ttl": 3600
+            },
+            {
+                "type": "CNAME",
+                "host": "www",
+                "pointsTo": "@",
+                "ttl": 3600
+            },
+            {
+                "type": "CNAME",
+                "host": "sub",
+                "pointsTo": "%sub%.mydomain.com",
+                "ttl": 3600
+            },
+            {
+                "type": "CNAME",
+                "host": "%cnamehost%",
+                "pointsTo": "%sub%.mydomain.com",
+                "ttl": 3600
+            },
+            {
+                "type": "TXT",
+                "host": "@",
+                "data": "%txt%",
+                "ttl": 3600
+            },
+            {
+                "type": "SPFM",
+                "host": "@",
+                "spfRules": "include:spf.mydomain.com"
+            },
+            {
+                "type": "MX",
+                "host": "@",
+                "pointsTo": "1.1.1.2",
+                "priority": "0",
+                "ttl": 3600
+            },
+            {
+                "type": "MX",
+                "host": "@",
+                "pointsTo": "%mx%",
+                "priority": "0",
+                "ttl": 3600
+            },
+            {
+                "type": "SRV",
+                "service": "_sip",
+                "protocol": "_tls",
+                "port": "443",
+                "weight": "20",
+                "priority": "10",
+                "name": "@",
+                "target": "%target%",
+                "ttl": 3600
+            }
+        ]
+    }
+    templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+    return render_template('dc_template_edit.html', new=True, template=template,
+                           params=templlist.get_variable_names(template))
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/save', methods=['POST'])
