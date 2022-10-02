@@ -415,6 +415,7 @@ def template_save(provider_id, service_id):
     except Exception as e:
         return jsonify({"msg": f"{e}"}), 500
 
+
 @dc_api_bp.route('/admin/templates/new/save', methods=['POST'])
 @login_required
 @is_json
