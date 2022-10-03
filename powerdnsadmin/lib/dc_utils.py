@@ -84,7 +84,8 @@ def transform_record_to_pdns_format(domain_name, record):
     }
     if record["type"] in ['SRV']:
         ret["data"] = f'{record["priority"]} {record["weight"]} {record["port"]} {record["data"]}'
-        ret["name"] = f'_{record["service"]}._{"tcp" if record["protocol"] == "TCP" else "udp"}.{record["name"]}'
+        ret["name"] = f'_{record["service"].lstrip("_")}._{record["protocol"].lstrip("_").lower()}' + \
+                      (f'.{record["name"]}' if record["name"] != '@' else '')
     elif record["type"] in ['MX']:
         ret["data"] = f'{record["priority"]} {record["data"]}'
     else:   
