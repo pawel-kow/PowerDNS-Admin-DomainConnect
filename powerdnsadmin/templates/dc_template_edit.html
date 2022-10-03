@@ -47,18 +47,74 @@
                         Reload Params&nbsp;<i class="fa fa-floppy-o"></i>
                     </button>
                 </div>
-                <div class="box-body">
-                    {% for k, v in params.items() %}
-                    <div class="row">
-                        <label class="col-xs-1" for="param_{{ k }}">
-                            {{ k }}
-                        </label>
-                        <div>
-                            <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-10">{{ v }} </input>
+                <form id="variable_post" method="POST">
+                    <input type="hidden" name="_template" id="variable_post_template"/>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="_test_template" id="variable_test_template" value="false"/>
+                    <div class="box-body">
+                        {% for k, v in params.items() %}
+                        <div class="row">
+                            <label class="col-xs-2" for="param_{{ k }}">
+                                {{ k }}
+                            </label>
+                            <div>
+                                <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9" value="{{ v }}"/>
+                            </div>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    <div class="box-body">
+                        <button type="button" class="btn btn-flat btn-primary pull-right button_submit_params">
+                            Test Template&nbsp;<i class="fa fa-floppy-o"></i>
+                        </button>
+                    </div>
+                </form>
+                {% if records %}
+                <div class="box-body">
+                    <table id="tbl_records" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>TTL</th>
+                                <th>Data</th>
+                                <th>Comment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                {% for record in records %}
+                                <tr class="odd row_record">
+                                    <td>
+                                        {{ (record.name,domain) | display_record_name | pretty_domain_name }}
+                                    </td>
+                                    <td>
+                                        {{ record.type }}
+                                    </td>
+                                    <td>
+                                        {{ record.status }}
+                                    </td>
+                                    <td>
+                                        {{ record.ttl }}
+                                    </td>
+                                    <td>
+                                        {{ record.data | pretty_domain_name }}
+                                    </td>
+                                    <td>
+                                        {{ record.comment }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
+                {% endif %}
+                {% if error %}
+                <!-- Error Alert -->
+                <div class="alert alert-danger show">
+                    <strong>Error!</strong> A problem has been occurred while submitting your data: {{ error }}
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -80,8 +136,11 @@
         delete data.definitions.TTL.anyOf[1].format;
         var obj = {};
         // pretty formatting JSON
+        {% if template_raw %}
+        obj.text = {{ template_raw | tojson }};
+        {% else %}
         obj.text = JSON.stringify(JSON.parse('{{ template | tojson}}'), null, 2);
-
+        {% endif %}
         // create the editor
         window.editor = new JSONEditor({
           target: document.getElementById('jsoneditor'),
@@ -133,7 +192,13 @@
         modal.modal('show');
     });
     $(document.body).on("click",".button_reload_params", function() {
-       alert('here');
+        $("#variable_post_template").val(window.editor.get().text);
+        $("#variable_post").submit();
+    });
+    $(document.body).on("click",".button_submit_params", function() {
+        $("#variable_post_template").val(window.editor.get().text);
+        $("#variable_test_template").val(true);
+        $("#variable_post").submit();
     });
 </script>
 {% endblock %}

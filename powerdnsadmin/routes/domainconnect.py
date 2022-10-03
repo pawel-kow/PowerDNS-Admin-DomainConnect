@@ -1,4 +1,5 @@
 import json
+from json import JSONDecodeError
 from urllib.parse import urljoin
 from base64 import b64encode
 from flask import (
@@ -45,8 +46,8 @@ dc_api_bp = Blueprint('domainconnect', __name__, url_prefix='/dc')
 
 dc_settings_schema = DomainConnectSettingsSchema()
 
+
 @dc_api_bp.before_request
-@is_json
 def before_request():
     # Check site is in maintenance mode
     maintenance = Setting().get('maintenance')
@@ -107,6 +108,7 @@ def dc_api_settings(domain_name):
 
     return jsonify(dc_settings_schema.dump(settings))
 
+
 @dc_api_bp.route('/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
 def dc_template_discovery(provider_id, service_id):
     try:
@@ -115,7 +117,6 @@ def dc_template_discovery(provider_id, service_id):
     except Exception as e:
         return jsonify({ "error": type(e).__name__, "error_message": f"{e}" }), 404
     return jsonify(dc.data)
-
 
 
 @dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply', methods=['GET'])
@@ -127,6 +128,7 @@ def dc_sync_ux_apply(provider_id, service_id):
     # params['fqdn'] = domain_name if host is None else f"{host}.{domain_name}"
     current_app.logger.debug(f"Apply args: {params}")
     return dc_sync_ux_apply_do(provider_id, service_id, domain_name=domain_name, host=host, params=params)
+
 
 def load_records(rrsets):
     records = []
@@ -210,7 +212,6 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     except Exception as e:
         dc_error = f'[{type(e).__name__}] {e}'
 
-
     return render_template('dc_apply_step1.html',
                            domain=domain,
                            records=records,
@@ -227,6 +228,7 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
                                 service_id = service_id,  **{**params, **{"_csrf": generate_csrf() }})
                            )
 
+
 @dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply-finalize', methods=['GET'])
 @login_required
 def dc_sync_ux_apply_finalize(provider_id, service_id):
@@ -242,6 +244,7 @@ def dc_sync_ux_apply_finalize(provider_id, service_id):
         return redirect(url_for('domainconnect.dc_sync_ux_apply', provider_id = provider_id,
                                 service_id = service_id,  **params))
     return dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name=domain_name, host=host, params=params)
+
 
 @can_access_domain
 def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, params):
@@ -295,23 +298,55 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
                            )
 
 
-@dc_api_bp.route('/admin/templates', methods=['GET', 'POST'])
-@dc_api_bp.route('/admin/templates/list', methods=['GET', 'POST'])
+@dc_api_bp.route('/admin/templates', methods=['GET'])
+@dc_api_bp.route('/admin/templates/list', methods=['GET'])
 @login_required
 def templates():
-    templates = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
-    return render_template('dc_template.html', templates=templates.templates)
+    templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+    return render_template('dc_template.html', templates=templlist.templates)
 
 
-@dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET', 'POST'])
+@dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['POST'])
+@dc_api_bp.route('/admin/templates/new', methods=['POST'])
+@login_required
+def template_edit_post(provider_id=None, service_id=None):
+    try:
+        templ = json.loads(request.form["_template"])
+        result = None
+        error = None
+        if request.form["_test_template"] == "true":
+            templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+            try:
+                templlist.validate_template(templ)
+                dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ)
+                dc_apply_result = dc.apply_template(zone_records=[], domain=request.form["domain"],
+                                  host=request.form["host"], group_ids=request.form["group"],
+                                  params=request.form, ignore_signature=True, multi_aware=True)
+                result = transform_records_to_pdns_format(request.form["domain"], dc_apply_result[2])
+            except Exception as e:
+                error = f"{e}"
+    except JSONDecodeError:
+        templ = {
+            "providerId": None,
+            "serviceId": None,
+            "records": []
+        }
+    return render_template('dc_template_edit.html', new=service_id is None or provider_id is None,
+                           template_raw=request.form["_template"], template=templ,
+                           params=DomainConnectTemplates.get_variable_names(templ, request.form),
+                           records=result, domain=request.form["domain"], error=error)
+
+
+@dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
 @login_required
 def template_edit(provider_id, service_id):
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
-    return render_template('dc_template_edit.html', new=False, template=dc.data,
-                           params=DomainConnectTemplates.get_variable_names(dc.data))
+    template = dc.data
+    return render_template('dc_template_edit.html', new=False, template=template,
+                           params=DomainConnectTemplates.get_variable_names(template))
 
 
-@dc_api_bp.route('/admin/templates/new', methods=['GET', 'POST'])
+@dc_api_bp.route('/admin/templates/new', methods=['GET'])
 @login_required
 def template_new():
     template = {
