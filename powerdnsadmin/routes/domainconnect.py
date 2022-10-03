@@ -52,10 +52,10 @@ def before_request():
     # Check site is in maintenance mode
     maintenance = Setting().get('maintenance')
     if (
-        maintenance and current_user.is_authenticated and
-        current_user.role.name not in [
-            'Administrator', 'Operator'
-        ]
+            maintenance and current_user.is_authenticated and
+            current_user.role.name not in [
+        'Administrator', 'Operator'
+    ]
     ):
         return make_response(
             jsonify({
@@ -77,13 +77,16 @@ def api_login_list_zones():
     return jsonify(domain_schema.dump(domain_obj_list)), 200
 '''
 
+
 @dc_api_bp.route('/', methods=['GET'])
 def dc_api_root():
     return jsonify({}), 404
 
+
 @dc_api_bp.route('/sync/', methods=['GET'])
 def dc_sync_ux_root():
     return jsonify({}), 404
+
 
 @dc_api_bp.route('/v2/<string:domain_name>/settings', methods=['GET'])
 def dc_api_settings(domain_name):
@@ -99,11 +102,11 @@ def dc_api_settings(domain_name):
         "providerName": Setting().get('dc_provider_name'),
         "providerDisplayName": Setting().get('dc_provider_display_name'),
         "urlSyncUX": url_for('domainconnect.dc_sync_ux_root', _external=True),
-#        "urlAsyncUX": "https://domainconnect.virtucondomains.com", //async not supported for now
+        #        "urlAsyncUX": "https://domainconnect.virtucondomains.com", //async not supported for now
         "urlAPI": url_for('domainconnect.dc_api_root', _external=True),
         "width": 750,
         "height": 750,
-        "urlControlPanel":  url_for("domain.domain", domain_name=domain_name, _external=True)
+        "urlControlPanel": url_for("domain.domain", domain_name=domain_name, _external=True)
     }
 
     return jsonify(dc_settings_schema.dump(settings))
@@ -112,14 +115,15 @@ def dc_api_settings(domain_name):
 @dc_api_bp.route('/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
 def dc_template_discovery(provider_id, service_id):
     try:
-        #TODO: protect provider_id and service_id so that path traversal won't be possible
+        # TODO: protect provider_id and service_id so that path traversal won't be possible
         dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
     except Exception as e:
-        return jsonify({ "error": type(e).__name__, "error_message": f"{e}" }), 404
+        return jsonify({"error": type(e).__name__, "error_message": f"{e}"}), 404
     return jsonify(dc.data)
 
 
-@dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply', methods=['GET'])
+@dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply',
+                 methods=['GET'])
 @login_required
 def dc_sync_ux_apply(provider_id, service_id):
     domain_name = request.args.get('domain')
@@ -152,7 +156,7 @@ def load_records(rrsets):
                 # If it is reverse zone and pretty_ipv6_ptr setting
                 # is enabled, we reformat the name for ipv6 records.
                 if Setting().get('pretty_ipv6_ptr') and r[
-                        'type'] == 'PTR' and 'ip6.arpa' in r_name and '*' not in r_name:
+                    'type'] == 'PTR' and 'ip6.arpa' in r_name and '*' not in r_name:
                     r_name = dns.reversename.to_address(
                         dns.name.from_text(r_name))
 
@@ -160,10 +164,10 @@ def load_records(rrsets):
                 # PDA jinja2 template can understand.
                 index = 0
                 for record in r['records']:
-                    if (len(r['comments'])>index):
-                        c=r['comments'][index]['content']
+                    if (len(r['comments']) > index):
+                        c = r['comments'][index]['content']
                     else:
-                        c=''
+                        c = ''
                     record_entry = RecordEntry(
                         name=r_name,
                         type=r['type'],
@@ -183,7 +187,7 @@ def load_records(rrsets):
 @can_access_domain
 def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     current_app.logger.debug(f'dc_sync_ux_apply_do {provider_id} {service_id} {domain_name} {params}')
-    
+
     domain = Domain.query.filter(Domain.name == domain_name).first()
     if not domain:
         abort(404)
@@ -216,20 +220,21 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
                            domain=domain,
                            records=records,
                            current_user=current_user,
-                           providerId = provider_id,
-                           providerName = dc.data["providerName"],
-                           serviceId = service_id,
-                           serviceName = dc.data["serviceName"],
-                           dc_error = dc_error,
-                           dc_add_records = dc_apply_result[0] if dc_apply_result is not None else None,
-                           dc_delete_records = dc_apply_result[1] if dc_apply_result is not None else None,
-                           dc_final_zone = dc_apply_result[2] if dc_apply_result is not None else None,
-                           dc_finalize_link = url_for('domainconnect.dc_sync_ux_apply_finalize', provider_id = provider_id,
-                                service_id = service_id,  **{**params, **{"_csrf": generate_csrf() }})
+                           providerId=provider_id,
+                           providerName=dc.data["providerName"],
+                           serviceId=service_id,
+                           serviceName=dc.data["serviceName"],
+                           dc_error=dc_error,
+                           dc_add_records=dc_apply_result[0] if dc_apply_result is not None else None,
+                           dc_delete_records=dc_apply_result[1] if dc_apply_result is not None else None,
+                           dc_final_zone=dc_apply_result[2] if dc_apply_result is not None else None,
+                           dc_finalize_link=url_for('domainconnect.dc_sync_ux_apply_finalize', provider_id=provider_id,
+                                                    service_id=service_id, **{**params, **{"_csrf": generate_csrf()}})
                            )
 
 
-@dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply-finalize', methods=['GET'])
+@dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply-finalize',
+                 methods=['GET'])
 @login_required
 def dc_sync_ux_apply_finalize(provider_id, service_id):
     domain_name = request.args.get('domain')
@@ -241,8 +246,8 @@ def dc_sync_ux_apply_finalize(provider_id, service_id):
     try:
         validate_csrf(csrf)
     except:
-        return redirect(url_for('domainconnect.dc_sync_ux_apply', provider_id = provider_id,
-                                service_id = service_id,  **params))
+        return redirect(url_for('domainconnect.dc_sync_ux_apply', provider_id=provider_id,
+                                service_id=service_id, **params))
     return dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name=domain_name, host=host, params=params)
 
 
@@ -276,7 +281,7 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
         )
         current_app.logger.debug(f'template apply result after transform to pdns: {dc_apply_result}')
         apply_dc_template_to_zone(domain_name, dc_apply_result, provider_id,
-            service_id, host, current_user.username, domain.id)
+                                  service_id, host, current_user.username, domain.id)
         rrsets = Record().get_rrsets(domain.name)
         records = load_records(rrsets)
     except Exception as e:
@@ -286,15 +291,15 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
                            domain=domain,
                            records=records,
                            current_user=current_user,
-                           providerId = provider_id,
-                           providerName = dc.data["providerName"],
-                           serviceId = service_id,
-                           serviceName = dc.data["serviceName"],
-                           dc_error = dc_error,
-                           dc_redirect_link = add_query_params(
-                                params["redirect_uri"], 
-                                dict(filter(lambda val: val[0] == "state", params.items()))
-                               ) if "redirect_uri" in params else None
+                           providerId=provider_id,
+                           providerName=dc.data["providerName"],
+                           serviceId=service_id,
+                           serviceName=dc.data["serviceName"],
+                           dc_error=dc_error,
+                           dc_redirect_link=add_query_params(
+                               params["redirect_uri"],
+                               dict(filter(lambda val: val[0] == "state", params.items()))
+                           ) if "redirect_uri" in params else None
                            )
 
 
@@ -320,8 +325,8 @@ def template_edit_post(provider_id=None, service_id=None):
                 templlist.validate_template(templ)
                 dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ)
                 dc_apply_result = dc.apply_template(zone_records=[], domain=request.form["domain"],
-                                  host=request.form["host"], group_ids=request.form["group"],
-                                  params=request.form, ignore_signature=True, multi_aware=True)
+                                                    host=request.form["host"], group_ids=request.form["group"],
+                                                    params=request.form, ignore_signature=True, multi_aware=True)
                 result = transform_records_to_pdns_format(request.form["domain"], dc_apply_result[2])
             except Exception as e:
                 error = f"{e}"
@@ -343,7 +348,7 @@ def template_edit(provider_id, service_id):
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
     template = dc.data
     return render_template('dc_template_edit.html', new=False, template=template,
-                           params=DomainConnectTemplates.get_variable_names(template))
+                           params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}))
 
 
 @dc_api_bp.route('/admin/templates/new', methods=['GET'])
@@ -433,7 +438,7 @@ def template_new():
         ]
     }
     return render_template('dc_template_edit.html', new=True, template=template,
-                           params=DomainConnectTemplates.get_variable_names(template))
+                           params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}))
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/save', methods=['POST'])
@@ -442,7 +447,9 @@ def template_new():
 def template_save(provider_id, service_id):
     templ = request.json["template"]
     if templ['providerId'] != provider_id or templ['serviceId'] != service_id:
-        return jsonify({"msg": f"ProviderId/ServiceId mismatch. Should have been: {provider_id} / {service_id}; was {templ['providerId']} / {templ['serviceId']}"}), 403
+        return jsonify({
+                           "msg": f"ProviderId/ServiceId mismatch. Should have been: {provider_id} / {service_id}; "
+                                  f"was {templ['providerId']} / {templ['serviceId']}"}), 403
 
     current_app.logger.info(f'Template to save: {templ}')
     templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))

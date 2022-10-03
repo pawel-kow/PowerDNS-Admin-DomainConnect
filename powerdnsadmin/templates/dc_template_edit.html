@@ -69,17 +69,16 @@
                         </button>
                     </div>
                 </form>
-                {% if records %}
-                <div class="box-body">
+                {% if records or error %}
+                <div class="box-body" id="tbl_records_and_errors">
+                    {% if records %}
                     <table id="tbl_records" class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>Name</th>
                                 <th>Type</th>
-                                <th>Status</th>
                                 <th>TTL</th>
                                 <th>Data</th>
-                                <th>Comment</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -92,27 +91,22 @@
                                         {{ record.type }}
                                     </td>
                                     <td>
-                                        {{ record.status }}
-                                    </td>
-                                    <td>
                                         {{ record.ttl }}
                                     </td>
                                     <td>
                                         {{ record.data | pretty_domain_name }}
                                     </td>
-                                    <td>
-                                        {{ record.comment }}
-                                    </td>
                                 </tr>
                                 {% endfor %}
                         </tbody>
                     </table>
-                </div>
-                {% endif %}
-                {% if error %}
-                <!-- Error Alert -->
-                <div class="alert alert-danger show">
-                    <strong>Error!</strong> A problem has been occurred while submitting your data: {{ error }}
+                    {% endif %}
+                    {% if error %}
+                    <!-- Error Alert -->
+                    <div class="alert alert-danger show">
+                        <strong>Error!</strong> A problem has been occurred while submitting your data: {{ error }}
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -149,10 +143,16 @@
             mode: "text",
             indentation: 2,
             mainMenuBar: false,
-            navigationBar: false
+            navigationBar: false,
+            content: obj,
+            focus: false
           }
         });
-        window.editor.set(obj);
+        if (document.location.hash.startsWith('#')) {
+            let element = document.getElementById(document.location.hash.substring(1))
+            if (element !== null)
+                element.scrollIntoView();
+        }
       });
 
 
@@ -193,11 +193,13 @@
     });
     $(document.body).on("click",".button_reload_params", function() {
         $("#variable_post_template").val(window.editor.get().text);
+        $("#variable_post").attr('action', '#variable_post');
         $("#variable_post").submit();
     });
     $(document.body).on("click",".button_submit_params", function() {
         $("#variable_post_template").val(window.editor.get().text);
         $("#variable_test_template").val(true);
+        $("#variable_post").attr('action', '#tbl_records_and_errors');
         $("#variable_post").submit();
     });
 </script>
