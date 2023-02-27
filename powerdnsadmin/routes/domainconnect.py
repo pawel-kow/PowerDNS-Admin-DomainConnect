@@ -192,6 +192,8 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     if not domain:
         abort(404)
 
+    group_ids, key, qs, sig = extract_domain_connect_params(params)
+
     # Query domain's rrsets from PowerDNS API
     rrsets = Record().get_rrsets(domain.name)
     # API server might be down, misconfigured
@@ -205,7 +207,9 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     dc_error = None
     dc_apply_result = None
     try:
-        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params)
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params,
+                                            group_ids=group_ids,
+                                            qs=qs, sig=sig, key=key, multi_aware=True)
         current_app.logger.debug(f'template apply result: {dc_apply_result}')
         dc_apply_result = (
             transform_records_to_pdns_format(domain_name, dc_apply_result[0]),
@@ -231,6 +235,30 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
                            dc_finalize_link=url_for('domainconnect.dc_sync_ux_apply_finalize', provider_id=provider_id,
                                                     service_id=service_id, **{**params, **{"_csrf": generate_csrf()}})
                            )
+
+
+def extract_domain_connect_params(params):
+    sig = None
+    key = None
+    group_ids = None
+
+    # extract DC params
+    if 'sig' in params:
+        sig = params['sig']
+    if 'key' in params:
+        key = params['key']
+    if 'groupId' in params:
+        group_ids = params['groupId'].split(',')
+
+    qs = None
+    split = request.query_string.decode('ascii').split('&')
+    for param in split:
+        if not param.startswith('sig=') and not param.startswith('key='):
+            if not qs:
+                qs = param
+            else:
+                qs = qs + '&' + param
+    return group_ids, key, qs, sig
 
 
 @dc_api_bp.route('/sync/v2/domainTemplates/providers/<string:provider_id>/services/<string:service_id>/apply-finalize',
@@ -268,11 +296,15 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
     dc_records = transform_records_to_dc_format(domain_name, records)
     current_app.logger.debug(f'transformed RRs: {dc_records}')
 
+    group_ids, key, qs, sig = extract_domain_connect_params(params)
+
     dc_error = None
     dc_apply_result = None
     try:
         dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
-        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params)
+        dc_apply_result = dc.apply_template(dc_records, domain_name, host, params,
+                                            group_ids=group_ids,
+                                            qs=qs, sig=sig, key=key, multi_aware=True)
         current_app.logger.debug(f'template apply result: {dc_apply_result}')
         dc_apply_result = (
             transform_records_to_pdns_format(domain_name, dc_apply_result[0]),
