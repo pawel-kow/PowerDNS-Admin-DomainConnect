@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}<title>DC Apply {{ domain.name | pretty_domain_name }} - {{ SITE_NAME }}</title>{% endblock %}
+
+{% block dashboard_stat %}
+<section class="content-header">
+    <h1>
+        Domain connect apply: <b>{{ domain.name | pretty_domain_name }}</b>
+    </h1>
+    <h3>Provider: {{ providerName }} ({{ providerId }}), Service: {{ serviceName }} ({{ serviceId }})</h3>
+    <ol class="breadcrumb">
+        <li><a href="{{ url_for('dashboard.dashboard') }}"><i
+                class="fa fa-dashboard"></i> Home</a></li>
+        <li>Domain</li>
+        <li class="active">{{ domain.name | pretty_domain_name }}</li>
+    </ol>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="content">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="box">
+                <div class="box-body">
+                    <table id="tbl_records" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>TTL</th>
+                                <th>Data</th>
+                                <th>Comment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                {% for record in records %}
+                                <tr class="odd row_record" id="{{ domain.name }}">
+                                    <td>
+                                        {{ (record.name,domain.name) | display_record_name | pretty_domain_name }}
+                                    </td>
+                                    <td>
+                                        {{ record.type }}
+                                    </td>
+                                    <td>
+                                        {{ record.status }}
+                                    </td>
+                                    <td>
+                                        {{ record.ttl }}
+                                    </td>
+                                    <td>
+                                        {{ record.data | pretty_domain_name }}
+                                    </td>
+                                    <td>
+                                        {{ record.comment }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- /.box-body -->
+            </div>
+            <!-- /.box -->
+        </div>
+        <!-- /.col -->
+    </div>
+    {% if not dc_error %}
+    <div class="row">
+        <div class="col-xs-12">
+            <a href="{{ dc_finalize_link }}"><button type="button" class="btn btn-flat btn-warning button_edit">Apply template<i class="fa fa-save"></i></button></a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- /.row -->
+    {% if not dc_error %}
+        {% set dc_tables = [[dc_add_records, "Records to add:"], [dc_delete_records, "Records to delete:"], [dc_final_zone, "Final zone:"]] %}
+        {% for dc_table in dc_tables %}
+        <div class="row">
+            <div class="col-xs-12">
+                <div class="box">
+                    <h2>{{ dc_table[1] }}</h2>
+                    <div class="box-body">
+                        <table id="tbl_records_dc_add" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>TTL</th>
+                                    <th>Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                    {% for record in dc_table[0] %}
+                                    <tr class="odd row_record" id="dc_add_{{ domain.name }}">
+                                        <td>
+                                            {{ record.name  }}
+                                        </td>
+                                        <td>
+                                            {{ record.type }}
+                                        </td>
+                                        <td>
+                                            {{ record.ttl }}
+                                        </td>
+                                        <td>
+                                            {{ record.data }}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- /.box-body -->
+                </div>
+                <!-- /.box -->
+            </div>
+            <!-- /.col -->
+        </div>
+        {% endfor %}
+    {% else %}
+        <h2 style="color: red;">Domain Connect error: {{ dc_error }}</h2>
+    {% endif %}
+    <!-- /.row -->
+</section>
+{% endblock %}
+{% block extrascripts %}
+<script>
+  //no content
+</script>
+{% endblock %}
+{% block modals %}
+{% endblock %}

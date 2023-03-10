@@ -13,6 +13,8 @@ def create_app(config=None):
     from . import models, routes, services
     from .assets import assets
     app = Flask(__name__)
+    app.config['JSON_SORT_KEYS'] = False
+
 
     # Read log level from environment variable
     log_level_name = os.environ.get('PDNS_ADMIN_LOG_LEVEL', 'WARNING')
@@ -105,6 +107,7 @@ def create_app(config=None):
     app.jinja_env.filters[
         'display_setting_state'] = utils.display_setting_state
     app.jinja_env.filters['pretty_domain_name'] = utils.pretty_domain_name
+
 
     # Register context proccessors
     from .models.setting import Setting

@@ -23,6 +23,9 @@ function applyChanges(data, url, showResult, refreshPage) {
             if (refreshPage) {
                 location.reload(true);
             }
+            if (data['nextUrl']) {
+                window.location.href = data['nextUrl'];
+            }
         },
 
         error : function(jqXHR, status) {

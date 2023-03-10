@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}<title>DC Apply {{ domain.name | pretty_domain_name }} - {{ SITE_NAME }}</title>{% endblock %}
+
+{% block dashboard_stat %}
+<section class="content-header">
+    <h1>
+        {% if not dc_error %}
+        Domain connect successfuly applied:
+        {% else %}
+        Error in Domain Connect apply:
+        {% endif %}
+        <b>{{ domain.name | pretty_domain_name }}</b>
+
+    </h1>
+    <h3>Provider: {{ providerName }} ({{ providerId }}), Service: {{ serviceName }} ({{ serviceId }})</h3>
+    <ol class="breadcrumb">
+        <li><a href="{{ url_for('dashboard.dashboard') }}"><i
+                class="fa fa-dashboard"></i> Home</a></li>
+        <li>Domain</li>
+        <li class="active">{{ domain.name | pretty_domain_name }}</li>
+    </ol>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="content">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="box">
+                <div class="box-body">
+                    <table id="tbl_records" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>TTL</th>
+                                <th>Data</th>
+                                <th>Comment</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                {% for record in records %}
+                                <tr class="odd row_record" id="{{ domain.name }}">
+                                    <td>
+                                        {{ (record.name,domain.name) | display_record_name | pretty_domain_name }}
+                                    </td>
+                                    <td>
+                                        {{ record.type }}
+                                    </td>
+                                    <td>
+                                        {{ record.status }}
+                                    </td>
+                                    <td>
+                                        {{ record.ttl }}
+                                    </td>
+                                    <td>
+                                        {{ record.data | pretty_domain_name }}
+                                    </td>
+                                    <td>
+                                        {{ record.comment }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <!-- /.box-body -->
+            </div>
+            <!-- /.box -->
+        </div>
+        <!-- /.col -->
+    </div>
+    {% if not dc_error%}
+        <div class="row">
+            <div class="col-xs-12">
+                {% if dc_redirect_link %}
+                    <a href="{{ dc_redirect_link }}"><button type="button" class="btn btn-flat btn-warning button_edit">Back to {{ providerName }}<i class="fa fa-close"></i></button></a>
+                {% else %}
+                    <button type="button" class="btn btn-flat btn-warning button_edit" onclick="var daddy = window.self; daddy.opener = window.self; daddy.close();">Close</button>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <h2 style="color: red;">Domain Connect error: {{ dc_error }}</h2>
+    {% endif %}
+    <!-- /.row -->
+</section>
+{% endblock %}
+{% block extrascripts %}
+<script>
+  //no content
+</script>
+{% endblock %}
+{% block modals %}
+{% endblock %}

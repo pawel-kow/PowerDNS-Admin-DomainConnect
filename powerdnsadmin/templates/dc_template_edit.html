@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% set active_page = "admin_domain_template" %}
+{% block title %}<title xmlns="http://www.w3.org/1999/html">Edit Template - {{ SITE_NAME }}</title>{% endblock %}
+
+{% block dashboard_stat %}
+<section class="content-header">
+    <h1>
+        Edit Domain Connect template <small>{{ template.providerId }} / {{ template.serviceId }}</small>
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="{{ url_for('dashboard.dashboard') }}"><i
+                class="fa fa-dashboard"></i> Home</a></li>
+        <li><a href="{{ url_for('domainconnect.templates') }}"><i class="fa fa-puzzle-piece"></i> Domain Connect Templates</a></li>
+        <li>{{ template.providerId }}</li>
+        <li class="active">{{ template.serviceId }}</li>
+    </ol>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="content">
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="box">
+                <div class="box-header">
+                    <h3 class="box-title">Manage Template Records for {{ template.providerId }} / {{ template.serviceId}}</h3>
+                </div>
+                <div class="box-body">
+                    {% if can_access_domain(template.providerId) or new %}
+                    <button type="button" class="btn btn-flat btn-primary pull-right button_apply_changes" id="{{ template.providerId }}.{{ template.serviceId }}">
+                        Apply Changes&nbsp;<i class="fa fa-floppy-o"></i>
+                    </button>
+                    {% else %}
+                    &nbsp;
+                    {% endif %}
+                </div>
+                <div class="box-body">
+                    <div id="jsoneditor"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="box">
+                <div class="box-header">
+                    <h3 class="box-title">Variables</h3>
+                </div>
+                <div class="box-body">
+                    <button type="button" class="btn btn-flat btn-primary pull-right button_reload_params">
+                        Reload Params&nbsp;<i class="fa fa-floppy-o"></i>
+                    </button>
+                </div>
+                <form id="variable_post" method="POST">
+                    <input type="hidden" name="_template" id="variable_post_template"/>
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
+                    <input type="hidden" name="_test_template" id="variable_test_template" value="false"/>
+                    <div class="box-body">
+                        {% for k, v in params.items() %}
+                        <div class="row">
+                            <label class="col-xs-2" for="param_{{ k }}">
+                                {{ k }}
+                            </label>
+                            <div>
+                                <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9" value="{{ v }}"/>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="box-body">
+                        <button type="button" class="btn btn-flat btn-primary pull-right button_submit_params">
+                            Test Template&nbsp;<i class="fa fa-floppy-o"></i>
+                        </button>
+                    </div>
+                </form>
+                {% if records or error %}
+                <div class="box-body" id="tbl_records_and_errors">
+                    {% if records %}
+                    <table id="tbl_records" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>TTL</th>
+                                <th>Data</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                {% for record in records %}
+                                <tr class="odd row_record">
+                                    <td>
+                                        {{ (record.name,domain) | display_record_name | pretty_domain_name }}
+                                    </td>
+                                    <td>
+                                        {{ record.type }}
+                                    </td>
+                                    <td>
+                                        {{ record.ttl }}
+                                    </td>
+                                    <td>
+                                        {{ record.data | pretty_domain_name }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+                    {% if error %}
+                    <!-- Error Alert -->
+                    <div class="alert alert-danger show">
+                        <strong>Error!</strong> A problem has been occurred while submitting your data: {{ error }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+{% block extrascripts %}
+<script type="module">
+      import { createAjvValidator, JSONEditor } from '{{ url_for('static', filename='node_modules/vanilla-jsoneditor/index.js') }}'
+
+      window.editor = null;
+
+      var schema = $.getJSON('https://raw.githubusercontent.com/Domain-Connect/Templates/master/template.schema', function(data) {
+        console.log(data);
+        // some hacks to make the schema working fine with avj
+        delete data.$schema;
+        delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-protocols'];
+        delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-extensions'];
+        data.definitions.TTL.anyOf[0].type = "number";
+        delete data.definitions.TTL.anyOf[1].format;
+        var obj = {};
+        // pretty formatting JSON
+        {% if template_raw %}
+        obj.text = {{ template_raw | tojson }};
+        {% else %}
+        obj.text = JSON.stringify(JSON.parse('{{ template | tojson}}'), null, 2);
+        {% endif %}
+        // create the editor
+        window.editor = new JSONEditor({
+          target: document.getElementById('jsoneditor'),
+          props: {
+            validator: createAjvValidator(data),
+            mode: "text",
+            indentation: 2,
+            mainMenuBar: false,
+            navigationBar: false,
+            content: obj,
+            focus: false
+            {% if not(can_access_domain(template.providerId) or new) %}
+            ,readOnly: true
+            {% endif %}
+          }
+        });
+        if (document.location.hash.startsWith('#')) {
+            let element = document.getElementById(document.location.hash.substring(1))
+            if (element !== null)
+                element.scrollIntoView();
+        }
+      });
+
+
+</script>
+<script>
+    // superglobals
+    window.nEditing = null;
+    window.nNew = false;
+    window.nNewEntry = {{ new | lower }};
+
+    // handle apply changes button
+    $(document.body).on("click",".button_apply_changes", function() {
+        if (nNew || nEditing) {
+            var modal = $("#modal_error");
+            modal.find('.modal-body p').text("Previous record not saved. Please save it before applying the changes.");
+            modal.modal('show');
+            return;
+        }
+
+        var modal = $("#modal_apply_changes");
+        var template = $(this).prop('id');
+        var info = "Are you sure you want to apply your changes?";
+        modal.find('.modal-body p').text(info);
+
+        // following unbind("click") is to avoid multiple times execution
+        modal.find('#button_apply_confirm').unbind("click").click(function() {
+            const content = JSON.parse(window.editor.get().text);
+            if (window.nNewEntry === false) {
+                applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'template': content}, $SCRIPT_ROOT + '{{ template.serviceId }}/save', true);
+            }
+            else {
+                applyChanges( {'_csrf_token': '{{ csrf_token() }}', 'template': content},
+                    '{{ url_for('domainconnect.template_save_new') }}', true);
+            }
+            modal.modal('hide');
+        })
+        modal.modal('show');
+    });
+    $(document.body).on("click",".button_reload_params", function() {
+        $("#variable_post_template").val(window.editor.get().text);
+        $("#variable_post").attr('action', '#variable_post');
+        $("#variable_post").submit();
+    });
+    $(document.body).on("click",".button_submit_params", function() {
+        $("#variable_post_template").val(window.editor.get().text);
+        $("#variable_test_template").val(true);
+        $("#variable_post").attr('action', '#tbl_records_and_errors');
+        $("#variable_post").submit();
+    });
+</script>
+{% endblock %}
+{% block modals %}
+<div class="modal fade modal-warning" id="modal_delete">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"
+                    aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Confirmation</h4>
+            </div>
+            <div class="modal-body">
+                <p></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-flat btn-default pull-left" id="button_delete_cancel"
+                    data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-flat btn-danger" id="button_delete_confirm">Delete</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+<div class="modal fade modal-primary" id="modal_apply_changes">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"
+                    aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">Confirmation</h4>
+            </div>
+            <div class="modal-body">
+                <p></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-flat btn-default pull-left"
+                    data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-flat btn-primary" id="button_apply_confirm">Apply</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+{% endblock %}

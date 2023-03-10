@@ -28,7 +28,7 @@ class Setting(db.Model):
         'allow_user_create_domain': False,
         'allow_user_remove_domain': False,
         'allow_user_view_history': False,
-	'delete_sso_accounts': False,
+	    'delete_sso_accounts': False,
         'bg_domain_updates': False,
         'enable_api_rr_history': True,
         'site_name': 'PowerDNS-Admin',
@@ -190,7 +190,12 @@ class Setting(db.Model):
         'otp_field_enabled': True,
         'custom_css': '',
         'otp_force': False,
-        'max_history_records': 1000
+        'max_history_records': 1000,
+        'dc_provider_id': "example.com",
+        'dc_provider_name': "Example provider",
+        'dc_provider_display_name': "Example provider",
+        'dc_template_folder': "/app/DomainConnectTemplates",
+        'allow_user_manage_dc_templates': False,
     }
 
     def __init__(self, id=None, name=None, value=None):

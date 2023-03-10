@@ -137,6 +137,13 @@
         <li class="{{ 'active' if active_page == 'admin_domain_template' else '' }}">
           <a href="{{ url_for('admin.templates') }}"><i class="fa fa-clone"></i> <span>Domain Templates</span></a>
         </li>
+        {% endif %}
+        {% if SETTING.get('allow_user_manage_dc_templates') or current_user.role.name in ['Administrator', 'Operator'] %}
+        <li class="{{ 'active' if active_page == 'admin_dc_template' else '' }}">
+          <a href="{{ url_for('domainconnect.templates') }}"><i class="fa fa-puzzle-piece"></i> <span>Domain Connect Templates</span></a>
+        </li>
+        {% endif %}
+        {% if current_user.role.name in ['Administrator', 'Operator'] %}
         <li class="{{ 'active' if active_page == 'admin_accounts' else '' }}">
           <a href="{{ url_for('admin.manage_account') }}"><i class="fa fa-industry"></i> <span>Accounts</span></a>
         </li>
