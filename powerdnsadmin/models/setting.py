@@ -195,6 +195,7 @@ class Setting(db.Model):
         'dc_provider_name': "Example provider",
         'dc_provider_display_name': "Example provider",
         'dc_template_folder': "/app/DomainConnectTemplates",
+        'allow_user_manage_dc_templates': False,
     }
 
     def __init__(self, id=None, name=None, value=None):

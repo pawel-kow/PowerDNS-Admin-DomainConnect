@@ -10,7 +10,9 @@
     <small>List</small>
   </h1>
   <ol class="breadcrumb">
-    <li><a href="{{ url_for('admin.templates') }}"><i class="fa fa-dashboard"></i> Templates</a></li>
+    <li><a href="{{ url_for('dashboard.dashboard') }}"><i
+            class="fa fa-dashboard"></i> Home</a></li>
+    <li><a href="{{ url_for('domainconnect.templates') }}"><i class="fa fa-puzzle-piece"></i> Domain Connect Templates</a></li>
     <li class="active">List</li>
   </ol>
 </section>
@@ -73,6 +75,7 @@
                   {{ template.template.records|count }}
                 </td>
                 <td>
+                  {% if current_user.role.name in ['Administrator', 'Operator'] or can_access_domain(template.providerId) %}
                   <a href="{{ url_for('domainconnect.template_edit', provider_id=template.providerId, service_id=template.serviceId) }}">
                     <button type="button" class="btn btn-flat btn-warning button_edit" id="btn_edit">
                       Edit&nbsp;<i class="fa fa-edit"></i>
@@ -81,6 +84,13 @@
                   <button type="button" class="btn btn-flat btn-danger button_delete" id="{{template.fileName}}">
                     Delete&nbsp;<i class="fa fa-trash"></i>
                   </button>
+                  {% else %}
+                    <a href="{{ url_for('domainconnect.template_edit', provider_id=template.providerId, service_id=template.serviceId) }}">
+                      <button type="button" class="btn btn-flat btn-primary history-info-button" id="btn_view">
+                        View&nbsp;<i class="fa fa-info"></i>
+                      </button>
+                    </a>
+                  {% endif %}
                 </td>
               </tr>
               {% endfor %}

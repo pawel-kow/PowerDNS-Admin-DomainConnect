@@ -10,7 +10,7 @@
     <ol class="breadcrumb">
         <li><a href="{{ url_for('dashboard.dashboard') }}"><i
                 class="fa fa-dashboard"></i> Home</a></li>
-        <li>Domain Connect Templates</li>
+        <li><a href="{{ url_for('domainconnect.templates') }}"><i class="fa fa-puzzle-piece"></i> Domain Connect Templates</a></li>
         <li>{{ template.providerId }}</li>
         <li class="active">{{ template.serviceId }}</li>
     </ol>
@@ -26,9 +26,13 @@
                     <h3 class="box-title">Manage Template Records for {{ template.providerId }} / {{ template.serviceId}}</h3>
                 </div>
                 <div class="box-body">
+                    {% if can_access_domain(template.providerId) or new %}
                     <button type="button" class="btn btn-flat btn-primary pull-right button_apply_changes" id="{{ template.providerId }}.{{ template.serviceId }}">
                         Apply Changes&nbsp;<i class="fa fa-floppy-o"></i>
                     </button>
+                    {% else %}
+                    &nbsp;
+                    {% endif %}
                 </div>
                 <div class="box-body">
                     <div id="jsoneditor"></div>
@@ -146,6 +150,9 @@
             navigationBar: false,
             content: obj,
             focus: false
+            {% if not(can_access_domain(template.providerId) or new) %}
+            ,readOnly: true
+            {% endif %}
           }
         });
         if (document.location.hash.startsWith('#')) {

@@ -1,4 +1,5 @@
 import json
+from functools import wraps
 from json import JSONDecodeError
 from urllib.parse import urljoin
 from base64 import b64encode
@@ -62,6 +63,19 @@ def before_request():
                 "status": False,
                 "msg": "Site is in maintenance mode"
             }))
+
+
+def operator_role_or_allow_user_manage_dc_templates_required(f):
+    """
+    Grant access if user is in Operator role or higher
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not(Setting().get('allow_user_manage_dc_templates') or current_user.role.name in ['Administrator', 'Operator']):
+            abort(403)
+        return f(*args, **kwargs)
+
+    return decorated_function
 
 
 '''
@@ -182,6 +196,21 @@ def load_records(rrsets):
     else:
         # Unsupported version
         abort(500)
+
+def dc_can_access_domain(domain_name):
+    domain = Domain.query.filter(Domain.name == domain_name).first()
+
+    if not domain:
+        return False
+
+    if current_user.role.name not in ['Administrator', 'Operator']:
+        valid_access = Domain(id=domain.id).is_valid_access(
+            current_user.id)
+
+        if not valid_access:
+            return False
+
+    return True
 
 
 @can_access_domain
@@ -337,14 +366,17 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
 
 @dc_api_bp.route('/admin/templates', methods=['GET'])
 @dc_api_bp.route('/admin/templates/list', methods=['GET'])
+@operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def templates():
+    current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
     templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
     return render_template('dc_template.html', templates=templlist.templates)
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['POST'])
 @dc_api_bp.route('/admin/templates/new', methods=['POST'])
+@operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def template_edit_post(provider_id=None, service_id=None):
     try:
@@ -375,8 +407,10 @@ def template_edit_post(provider_id=None, service_id=None):
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
+@operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def template_edit(provider_id, service_id):
+    current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
     template = dc.data
     return render_template('dc_template_edit.html', new=False, template=template,
@@ -384,6 +418,7 @@ def template_edit(provider_id, service_id):
 
 
 @dc_api_bp.route('/admin/templates/new', methods=['GET'])
+@operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def template_new():
     template = {
@@ -474,6 +509,7 @@ def template_new():
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/save', methods=['POST'])
+@operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 @is_json
 def template_save(provider_id, service_id):
@@ -482,6 +518,8 @@ def template_save(provider_id, service_id):
         return jsonify({
                            "msg": f"ProviderId/ServiceId mismatch. Should have been: {provider_id} / {service_id}; "
                                   f"was {templ['providerId']} / {templ['serviceId']}"}), 403
+    if not dc_can_access_domain(templ['providerId']):
+        return jsonify({"msg": f"No access to domain {templ['providerId']}."}), 403
 
     current_app.logger.info(f'Template to save: {templ}')
     templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
@@ -493,6 +531,7 @@ def template_save(provider_id, service_id):
 
 
 @dc_api_bp.route('/admin/templates/new/save', methods=['POST'])
+@operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 @is_json
 def template_save_new():
@@ -501,6 +540,8 @@ def template_save_new():
     current_app.logger.info(f'Template to save: {templ}')
     templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
     try:
+        if not dc_can_access_domain(templ['providerId']):
+            return jsonify({"msg": f"No access to domain {templ['providerId']}."}), 403
         templlist.create_template(templ)
         return jsonify({"msg": f"Template {templ['providerId']} / {templ['serviceId']} saved successfully.",
                         "nextUrl": url_for("domainconnect.template_edit", provider_id=templ['providerId'],
