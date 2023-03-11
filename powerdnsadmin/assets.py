@@ -24,7 +24,7 @@ js_login = Bundle('node_modules/jquery/dist/jquery.js',
                   'node_modules/bootstrap/dist/js/bootstrap.js',
                   'node_modules/icheck/icheck.js',
                   'custom/js/custom.js',
-r3                  filters=(ConcatFilter, 'rjsmin'),
+                  filters=(ConcatFilter, 'rjsmin'),
                   output='generated/login.js')
 
 js_validation = Bundle('node_modules/bootstrap-validator/dist/validator.js',
