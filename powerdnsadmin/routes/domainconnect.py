@@ -282,7 +282,7 @@ def extract_domain_connect_params(params):
     qs = None
     split = request.query_string.decode('ascii').split('&')
     for param in split:
-        if not param.startswith('sig=') and not param.startswith('key='):
+        if not param.startswith('sig=') and not param.startswith('key=') and not param.startswith('_csrf='):
             if not qs:
                 qs = param
             else:
