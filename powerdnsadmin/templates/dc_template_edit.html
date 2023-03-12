@@ -120,7 +120,7 @@
 {% endblock %}
 {% block extrascripts %}
 <script type="module">
-      import { createAjvValidator, JSONEditor } from '{{ url_for('static', filename='node_modules/vanilla-jsoneditor/index.js') }}'
+      import { createAjvValidator, JSONEditor } from '{{ url_for('static', filename='generated/vanilla-jsoneditor.js') }}'
 
       window.editor = null;
 

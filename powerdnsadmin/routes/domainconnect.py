@@ -261,8 +261,9 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
                            dc_add_records=dc_apply_result[0] if dc_apply_result is not None else None,
                            dc_delete_records=dc_apply_result[1] if dc_apply_result is not None else None,
                            dc_final_zone=dc_apply_result[2] if dc_apply_result is not None else None,
-                           dc_finalize_link=url_for('domainconnect.dc_sync_ux_apply_finalize', provider_id=provider_id,
-                                                    service_id=service_id, **{**params, **{"_csrf": generate_csrf()}})
+                           dc_finalize_link=f'{url_for("domainconnect.dc_sync_ux_apply_finalize", provider_id=provider_id, service_id=service_id)}'
+                                            f'?{request.query_string.decode("ascii")}'
+                                            f'&_csrf={generate_csrf()}'
                            )
 
 
