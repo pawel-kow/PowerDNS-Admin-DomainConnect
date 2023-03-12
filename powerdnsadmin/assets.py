@@ -30,6 +30,9 @@ js_login = Bundle('node_modules/jquery/dist/jquery.js',
 js_validation = Bundle('node_modules/bootstrap-validator/dist/validator.js',
                        output='generated/validation.js')
 
+js_validation = Bundle('node_modules/vanilla-jsoneditor/index.js',
+                       output='generated/vanilla-jsoneditor.js')
+
 css_main = Bundle(
     'node_modules/bootstrap/dist/css/bootstrap.css',
     'node_modules/font-awesome/css/font-awesome.css',
