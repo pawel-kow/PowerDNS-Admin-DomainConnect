@@ -46,6 +46,13 @@
                 <div class="box-header">
                     <h3 class="box-title">Variables</h3>
                 </div>
+                {% if templateerror %}
+                    <!-- Error Alert -->
+                    <div class="alert alert-danger show">
+                        <strong>Error!</strong> Error parsing template variables: {{ templateerror }}
+                    </div>
+                {% endif %}
+
                 <div class="box-body">
                     <button type="button" class="btn btn-flat btn-primary pull-right button_reload_params">
                         Reload Params&nbsp;<i class="fa fa-floppy-o"></i>

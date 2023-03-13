@@ -1268,7 +1268,7 @@ def setting_basic():
             'session_timeout', 'warn_session_timeout', 'ttl_options',
             'pdns_api_timeout', 'verify_ssl_connections', 'verify_user_email',
 	        'delete_sso_accounts', 'otp_field_enabled', 'custom_css', 'enable_api_rr_history', 'max_history_records', 'otp_force',
-            'dc_provider_id', 'dc_provider_name', 'dc_provider_display_name', 'dc_template_folder'
+            'dc_provider_id', 'dc_provider_name', 'dc_provider_display_name', 'dc_template_folder', 'allow_user_manage_dc_templates'
         ]
 
         return render_template('admin_setting_basic.html', settings=settings)

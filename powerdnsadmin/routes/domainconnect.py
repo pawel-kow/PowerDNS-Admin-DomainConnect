@@ -200,13 +200,11 @@ def load_records(rrsets):
 def dc_can_access_domain(domain_name):
     domain = Domain.query.filter(Domain.name == domain_name).first()
 
-    if not domain:
-        return False
-
     if current_user.role.name not in ['Administrator', 'Operator']:
+        if not domain:
+            return False
         valid_access = Domain(id=domain.id).is_valid_access(
             current_user.id)
-
         if not valid_access:
             return False
 
@@ -380,12 +378,26 @@ def templates():
 @operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def template_edit_post(provider_id=None, service_id=None):
+    current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
     try:
-        templ = json.loads(request.form["_template"])
         result = None
         error = None
+        templateerror = None
+        variables = {}
+        templ = templ = {
+            "providerId": None,
+            "serviceId": None,
+            "records": []
+        }
+        templ = json.loads(request.form["_template"])
+        templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+        templlist.validate_template(templ)
+        try:
+            variables = DomainConnectTemplates.get_variable_names(templ, request.form)
+        except InvalidTemplate as tex:
+            templateerror = f"{tex}"
+
         if request.form["_test_template"] == "true":
-            templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
             try:
                 templlist.validate_template(templ)
                 dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ)
@@ -395,16 +407,14 @@ def template_edit_post(provider_id=None, service_id=None):
                 result = transform_records_to_pdns_format(request.form["domain"], dc_apply_result[2])
             except Exception as e:
                 error = f"{e}"
-    except JSONDecodeError:
-        templ = {
-            "providerId": None,
-            "serviceId": None,
-            "records": []
-        }
+    except JSONDecodeError as jex:
+        templateerror = f"Invalid JSON format: {jex}"
+    except Exception as gex:
+        templateerror = f"Template validation error: {gex}"
     return render_template('dc_template_edit.html', new=service_id is None or provider_id is None,
                            template_raw=request.form["_template"], template=templ,
-                           params=DomainConnectTemplates.get_variable_names(templ, request.form),
-                           records=result, domain=request.form["domain"], error=error)
+                           params=variables,
+                           records=result, error=error, templateerror=templateerror)
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
@@ -422,6 +432,7 @@ def template_edit(provider_id, service_id):
 @operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def template_new():
+    current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
     template = {
         "providerId": "<Enter providerId>",
         "providerName": "<Enter providerName>",
