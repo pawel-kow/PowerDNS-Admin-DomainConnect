@@ -116,9 +116,8 @@
         <p>- OR -</p>
         {% endif %}
         {% if SETTING.get('oidc_oauth_enabled') %}
-        <a href="{{ url_for('index.oidc_login') }}" class="btn btn-block btn-social btn-openid btn-flat"><i
-            class="fa fa-openid"></i> Sign in using
-          OpenID Connect</a>
+        <a href="{{ url_for('index.oidc_login') }}" class="btn btn-block btn-social btn-github btn-flat"><i
+            class="fa fa-sign-in"></i> Sign in</a>
         {% endif %}
         {% if SETTING.get('github_oauth_enabled') %}
         <a href="{{ url_for('index.github_login') }}" class="btn btn-block btn-social btn-github btn-flat"><i
