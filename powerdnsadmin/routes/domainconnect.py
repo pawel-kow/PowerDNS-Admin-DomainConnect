@@ -402,7 +402,8 @@ def template_edit_post(provider_id=None, service_id=None):
                 templlist.validate_template(templ)
                 dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ)
                 dc_apply_result = dc.apply_template(zone_records=[], domain=request.form["domain"],
-                                                    host=request.form["host"], group_ids=request.form["group"],
+                                                    host=request.form["host"],
+                                                    group_ids=[s.strip() for s in request.form["group"].split(",")],
                                                     params=request.form, ignore_signature=True, multi_aware=True)
                 result = transform_records_to_pdns_format(request.form["domain"], dc_apply_result[2])
             except Exception as e:
