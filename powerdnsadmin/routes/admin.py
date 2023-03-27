@@ -4,6 +4,8 @@ import traceback
 import re
 from base64 import b64encode
 from ast import literal_eval
+from json import JSONDecodeError
+
 from flask import Blueprint, render_template, render_template_string, make_response, url_for, current_app, request, redirect, jsonify, abort, flash, session
 from flask_login import login_required, current_user
 
@@ -762,8 +764,11 @@ class DetailedHistory():
         if not history.detail:
             self.detailed_msg = ""
             return
-
-        detail_dict = json.loads(history.detail)
+        try:
+            detail_dict = json.loads(history.detail)
+        except JSONDecodeError as e:
+            self.detailed_msg = history.detail
+            return
 
         if 'domain_type' in detail_dict and 'account_id' in detail_dict:  # this is a domain creation
             self.detailed_msg = render_template_string("""
