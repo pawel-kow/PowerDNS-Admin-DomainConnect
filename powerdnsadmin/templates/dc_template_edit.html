@@ -64,14 +64,26 @@
                     <input type="hidden" name="_test_template" id="variable_test_template" value="false"/>
                     <div class="box-body">
                         {% for k, v in params.items() %}
-                        <div class="row">
-                            <label class="col-xs-2" for="param_{{ k }}">
-                                {{ k }}
-                            </label>
-                            <div>
-                                <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9" value="{{ v }}"/>
+                            {% if k != "group" %}
+                            <div class="row">
+                                <label class="col-xs-2" for="param_{{ k }}">
+                                    {{ k }}
+                                </label>
+                                <div>
+                                    <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9" value="{{ v }}"/>
+                                </div>
                             </div>
-                        </div>
+                        {% else %}
+                            {% for g in groups %}
+                                <div class="row">
+                                    <label class="col-xs-2" for="group-{{ g }}">Group {{ g }}</label>
+                                    <div>
+                                        <input type="checkbox" class="input col-xs-1" id="group-{{ g }}" name="group" value="{{ g }}" {% if g in group_values %}checked{% endif %} >
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            <hr>
+                        {% endif %}
                         {% endfor %}
                     </div>
                     <div class="box-body">

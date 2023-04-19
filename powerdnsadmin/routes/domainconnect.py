@@ -403,8 +403,7 @@ def template_edit_post(provider_id=None, service_id=None):
                 dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ)
                 dc_apply_result = dc.apply_template(zone_records=[], domain=request.form["domain"],
                                                     host=request.form["host"],
-                                                    group_ids=[s.strip() for s in request.form["group"].split(",")]
-                                                    if len(request.form["group"].strip()) > 0 else None,
+                                                    group_ids=request.form.getlist('group'),
                                                     params=request.form, ignore_signature=True, multi_aware=True)
                 result = transform_records_to_pdns_format(request.form["domain"], dc_apply_result[2])
             except Exception as e:
@@ -416,6 +415,8 @@ def template_edit_post(provider_id=None, service_id=None):
     return render_template('dc_template_edit.html', new=service_id is None or provider_id is None,
                            template_raw=request.form["_template"], template=templ,
                            params=variables,
+                           groups=DomainConnectTemplates.get_group_ids(templ),
+                           group_values=request.form.getlist('group'),
                            records=result, error=error, templateerror=templateerror)
 
 
@@ -427,7 +428,8 @@ def template_edit(provider_id, service_id):
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
     template = dc.data
     return render_template('dc_template_edit.html', new=False, template=template,
-                           params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}))
+                           params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}),
+                           groups=DomainConnectTemplates.get_group_ids(template))
 
 
 @dc_api_bp.route('/admin/templates/new', methods=['GET'])
@@ -519,7 +521,8 @@ def template_new():
         ]
     }
     return render_template('dc_template_edit.html', new=True, template=template,
-                           params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}))
+                           params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}),
+                           groups=DomainConnectTemplates.get_group_ids(template))
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/save', methods=['POST'])
