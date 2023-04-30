@@ -47,6 +47,10 @@ dc_api_bp = Blueprint('domainconnect', __name__, url_prefix='/dc')
 
 dc_settings_schema = DomainConnectSettingsSchema()
 
+redir_template_records = [
+   {'type': 'A', 'pointsTo': '127.0.0.1', 'ttl': 600},
+   {'type': 'AAAA', 'pointsTo': '::1', 'ttl': 600}
+]
 
 @dc_api_bp.before_request
 def before_request():
@@ -130,7 +134,8 @@ def dc_api_settings(domain_name):
 def dc_template_discovery(provider_id, service_id):
     try:
         # TODO: protect provider_id and service_id so that path traversal won't be possible
-        dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+        dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'),
+                           redir_template_records=redir_template_records)
     except Exception as e:
         return jsonify({"error": type(e).__name__, "error_message": f"{e}"}), 404
     return jsonify(dc.data)
@@ -230,7 +235,8 @@ def dc_sync_ux_apply_do(provider_id, service_id, domain_name, host, params):
     dc_records = transform_records_to_dc_format(domain_name, records)
     current_app.logger.debug(f'transformed RRs: {dc_records}')
 
-    dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+    dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'),
+                       redir_template_records=redir_template_records)
     dc_error = None
     dc_apply_result = None
     try:
@@ -329,7 +335,8 @@ def dc_sync_ux_apply_do_finalize(provider_id, service_id, domain_name, host, par
     dc_error = None
     dc_apply_result = None
     try:
-        dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'))
+        dc = DomainConnect(provider_id, service_id, Setting().get('dc_template_folder'),
+                           redir_template_records=redir_template_records)
         dc_apply_result = dc.apply_template(dc_records, domain_name, host, params,
                                             group_ids=group_ids,
                                             qs=qs, sig=sig, key=key, multi_aware=True)
@@ -400,7 +407,8 @@ def template_edit_post(provider_id=None, service_id=None):
         if request.form["_test_template"] == "true":
             try:
                 templlist.validate_template(templ)
-                dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ)
+                dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ,
+                                   redir_template_records=redir_template_records)
                 dc_apply_result = dc.apply_template(zone_records=[], domain=request.form["domain"],
                                                     host=request.form["host"],
                                                     group_ids=[s.strip() for s in request.form["group"].split(",")]
@@ -424,7 +432,8 @@ def template_edit_post(provider_id=None, service_id=None):
 @login_required
 def template_edit(provider_id, service_id):
     current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
-    dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'))
+    dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'),
+                       redir_template_records=redir_template_records)
     template = dc.data
     return render_template('dc_template_edit.html', new=False, template=template,
                            params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}))

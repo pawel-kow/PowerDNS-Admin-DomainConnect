@@ -64,6 +64,8 @@ def transform_record_to_dc_format(domain, record):
         else:
             ret["priority"] = mxregex.group(1)
             ret["data"] = mxregex.group(2)
+    elif record.type in ['TYPE65301', 'TYPE65302']:
+        ret['type'] = f"REDIR{record.type[7:]}"
     else:
         ret["data"] = record.data
     #TODO: convert comments to _dc dict entries
@@ -80,8 +82,10 @@ def transform_record_to_pdns_format(domain_name, record):
         # "name": domain_name if record["name"] == "@" or record["name"] == "" else 
         #     (record["name"] if record["name"].endswith(".") else f'{record["name"]}.{domain_name}'),
         "name": record["name"],
-        "ttl": record["ttl"]
+        "ttl": record["ttl"] if "ttl" in record else 60
     }
+    if record['type'] in ['REDIR301', 'REDIR302']:
+        ret['type'] = f'TYPE65{record["type"][5:]}'
     if record["type"] in ['SRV']:
         ret["data"] = f'{record["priority"]} {record["weight"]} {record["port"]} {record["data"]}'
         ret["name"] = f'_{record["service"].lstrip("_")}._{record["protocol"].lstrip("_").lower()}' + \
