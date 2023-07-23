@@ -380,6 +380,16 @@ def templates():
     return render_template('dc_template.html', templates=templlist.templates)
 
 
+@dc_api_bp.route('/admin/templates/schema', methods=['GET'])
+@operator_role_or_allow_user_manage_dc_templates_required
+@login_required
+def template_schema():
+    templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
+    if templlist.schema is not None:
+        return templlist.schema
+    else:
+        return abort(404)
+
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['POST'])
 @dc_api_bp.route('/admin/templates/new', methods=['POST'])
 @operator_role_or_allow_user_manage_dc_templates_required

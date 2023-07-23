@@ -143,7 +143,7 @@
 
       window.editor = null;
 
-      var schema = $.getJSON('https://raw.githubusercontent.com/Domain-Connect/Templates/master/template.schema', function(data) {
+      var schema = $.getJSON("{{ url_for('domainconnect.template_schema') }}", function(data) {
         console.log(data);
         // some hacks to make the schema working fine with avj
         delete data.$schema;
