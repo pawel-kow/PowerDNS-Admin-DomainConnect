@@ -413,7 +413,10 @@ def template_edit_post(provider_id=None, service_id=None):
             variables = DomainConnectTemplates.get_variable_names(templ, request.form)
         except InvalidTemplate as tex:
             templateerror = f"{tex}"
-
+        groups=DomainConnectTemplates.get_group_ids(templ)
+        group_variables = {}
+        for g in groups:
+            group_variables[g] = DomainConnectTemplates.get_variable_names(templ, request.form, g)
         if request.form["_test_template"] == "true":
             try:
                 templlist.validate_template(templ)
@@ -433,8 +436,9 @@ def template_edit_post(provider_id=None, service_id=None):
     return render_template('dc_template_edit.html', new=service_id is None or provider_id is None,
                            template_raw=request.form["_template"], template=templ,
                            params=variables,
-                           groups=DomainConnectTemplates.get_group_ids(templ),
+                           groups=groups,
                            group_values=request.form.getlist('group'),
+                           group_variables=group_variables,
                            records=result, error=error, templateerror=templateerror)
 
 
