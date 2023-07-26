@@ -401,6 +401,8 @@ def template_edit_post(provider_id=None, service_id=None):
         error = None
         templateerror = None
         variables = {}
+        groups = []
+        group_variables = {}
         templ = templ = {
             "providerId": None,
             "serviceId": None,
@@ -450,9 +452,15 @@ def template_edit(provider_id, service_id):
     dc = DomainConnect(provider_id, service_id, template_path=Setting().get('dc_template_folder'),
                        redir_template_records=redir_template_records)
     template = dc.data
+    groups = DomainConnectTemplates.get_group_ids(template)
+    group_variables = {}
+    for g in groups:
+        group_variables[g] = DomainConnectTemplates.get_variable_names(template, {}, g)
     return render_template('dc_template_edit.html', new=False, template=template,
                            params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}),
-                           groups=DomainConnectTemplates.get_group_ids(template))
+                           groups=groups,
+                           group_values=[],
+                           group_variables=group_variables)
 
 
 @dc_api_bp.route('/admin/templates/new', methods=['GET'])
@@ -543,9 +551,15 @@ def template_new():
             }
         ]
     }
+    groups = DomainConnectTemplates.get_group_ids(template)
+    group_variables = {}
+    for g in groups:
+        group_variables[g] = DomainConnectTemplates.get_variable_names(template, {}, g)
     return render_template('dc_template_edit.html', new=True, template=template,
                            params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}),
-                           groups=DomainConnectTemplates.get_group_ids(template))
+                           groups=groups,
+                           group_values=[],
+                           group_variables=group_variables)
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/save', methods=['POST'])

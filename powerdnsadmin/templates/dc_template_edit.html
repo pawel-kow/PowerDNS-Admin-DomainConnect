@@ -60,7 +60,7 @@
                 </div>
                 <div class="box-body">
                     <select id="test_selection" class="pull-right col-xs-2">
-                        <option value="test">Test</option>
+                        <option value="<clear>">-----</option>
                     </select>
                 </div>
                 <form id="variable_post" method="POST">
@@ -81,7 +81,7 @@
                                         {{ k }}
                                     </label>
                                     <div>
-                                        <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9" value="{{ v }}"/>
+                                        <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9 param-input" value="{{ v }}"/>
                                     </div>
                                 </div>
                             {% else %}
@@ -89,7 +89,7 @@
                                     <div class="row">
                                         <label class="col-xs-2" for="group-{{ g }}">Group {{ g }}</label>
                                         <div>
-                                            <input type="checkbox" class="input col-xs-1 group-checkbox" id="group-{{ g }}" name="group" value="{{ g }}" {% if g in group_values %}checked{% endif %} >
+                                            <input type="checkbox" class="input col-xs-1 group-checkbox param-input-cbx" id="group-{{ g }}" name="group" value="{{ g }}" {% if g in group_values %}checked{% endif %} >
                                         </div>
                                     </div>
                                 {% endfor %}
@@ -163,7 +163,6 @@
       window.editor = null;
 
       var schema = $.getJSON("{{ url_for('domainconnect.template_schema') }}", function(data) {
-        console.log(data);
         // some hacks to make the schema working fine with avj
         delete data.$schema;
         delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-protocols'];
@@ -195,7 +194,6 @@
         });
         updateTestDropDown();
         updateVariableVisibility();
-        console.log({{ group_variables | tojson }});
         if (document.location.hash.startsWith('#')) {
             let element = document.getElementById(document.location.hash.substring(1))
             if (element !== null)
@@ -270,7 +268,6 @@
         }
         current_template.testData[testName].variables.group = {{ group_values | tojson }}
         for(k in current_template.testData[testName].variables) {
-            console.log(k);
             if (current_template.testData[testName].variables[k] == '') {
                 delete current_template.testData[testName].variables[k];
             }
@@ -281,12 +278,36 @@
     $(document.body).on("change", ".group-checkbox", function(e) {
         updateVariableVisibility();
     });
+    $(document.body).on("change", "#test_selection", function(e) {
+        $(".param-input").val("");
+        $("#param_domain").val("example.com");
+        $(".param-input-cbx").prop('checked', false);
+        var current_template = JSON.parse(window.editor.get().text);
+        if (current_template.testData != null) {
+            select = $("#test_selection").find(":selected").val();
+            if (select in current_template.testData) {
+                for (k in current_template.testData[select].variables)
+                {
+                    $("#param_" + k).val(current_template.testData[select].variables[k]);
+                }
+                if ("group" in current_template.testData[select].variables) {
+                    for (g in current_template.testData[select].variables.group) {
+                        $("#group-" + current_template.testData[select].variables.group[g]).prop('checked', true);
+                    }
+                }
+            }
+        }
+    });
     const updateTestDropDown = function() {
         var current_template = JSON.parse(window.editor.get().text);
         if (current_template.testData != null) {
-            console.log($("test_selection"));
-//            for (k in current_template.testData) {
-//            }
+            select = $("#test_selection")[0];
+            for(k in current_template.testData) {
+                const option = document.createElement('option')
+                option.innerHTML = k
+                option.setAttribute("value", k)
+                select.appendChild(option)
+            };
         }
     }
     const updateVariableVisibility = function() {
