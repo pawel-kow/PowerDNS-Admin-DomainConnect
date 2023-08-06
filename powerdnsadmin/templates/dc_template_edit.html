@@ -58,6 +58,11 @@
                         Reload Params&nbsp;<i class="fa fa-floppy-o"></i>
                     </button>
                 </div>
+                <div class="box-body">
+                    <select id="test_selection" class="pull-right col-xs-2">
+                        <option value="<clear>">-----</option>
+                    </select>
+                </div>
                 <form id="variable_post" method="POST">
                     <input type="hidden" name="_template" id="variable_post_template"/>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
@@ -65,24 +70,30 @@
                     <div class="box-body">
                         {% for k, v in params.items() %}
                             {% if k != "group" %}
-                            <div class="row">
-                                <label class="col-xs-2" for="param_{{ k }}">
-                                    {{ k }}
-                                </label>
-                                <div>
-                                    <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9" value="{{ v }}"/>
-                                </div>
-                            </div>
-                        {% else %}
-                            {% for g in groups %}
-                                <div class="row">
-                                    <label class="col-xs-2" for="group-{{ g }}">Group {{ g }}</label>
+                                <div class="row variable-input"
+                                     {% for gk, gv in group_variables.items() %}
+                                        {% if k in gv %}
+                                            data-group-{{ gk }}="{% if gk in group_values %}true{% else %}false{% endif %}"
+                                        {% endif %}
+                                     {% endfor %}
+                                >
+                                    <label class="col-xs-2" for="param_{{ k }}">
+                                        {{ k }}
+                                    </label>
                                     <div>
-                                        <input type="checkbox" class="input col-xs-1" id="group-{{ g }}" name="group" value="{{ g }}" {% if g in group_values %}checked{% endif %} >
+                                        <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9 param-input" value="{{ v }}"/>
                                     </div>
                                 </div>
-                            {% endfor %}
-                            <hr>
+                            {% else %}
+                                {% for g in groups %}
+                                    <div class="row">
+                                        <label class="col-xs-2" for="group-{{ g }}">Group {{ g }}</label>
+                                        <div>
+                                            <input type="checkbox" class="input col-xs-1 group-checkbox param-input-cbx" id="group-{{ g }}" name="group" value="{{ g }}" {% if g in group_values %}checked{% endif %} >
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                <hr>
                         {% endif %}
                         {% endfor %}
                     </div>
@@ -123,6 +134,14 @@
                                 {% endfor %}
                         </tbody>
                     </table>
+                    <div class="box-body">
+                        <div class="col col-xs-7">&nbsp;</div>
+                        <input type="text" id="save_test_name" class="input col-xs-2">
+                        <div class="col col-xs-1">&nbsp;</div>
+                        <button type="button" id="save_test_btn" class="btn btn-flat btn-primary col-xs-2">
+                            Add as test&nbsp;<i class="fa fa-floppy-o"></i>
+                        </button>
+                    </div>
                     {% endif %}
                     {% if error %}
                     <!-- Error Alert -->
@@ -143,8 +162,7 @@
 
       window.editor = null;
 
-      var schema = $.getJSON('https://raw.githubusercontent.com/Domain-Connect/Templates/master/template.schema', function(data) {
-        console.log(data);
+      var schema = $.getJSON("{{ url_for('domainconnect.template_schema') }}", function(data) {
         // some hacks to make the schema working fine with avj
         delete data.$schema;
         delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-protocols'];
@@ -174,6 +192,8 @@
             {% endif %}
           }
         });
+        updateTestDropDown();
+        updateVariableVisibility();
         if (document.location.hash.startsWith('#')) {
             let element = document.getElementById(document.location.hash.substring(1))
             if (element !== null)
@@ -228,6 +248,110 @@
         $("#variable_post").attr('action', '#tbl_records_and_errors');
         $("#variable_post").submit();
     });
+    {% if params and records %}
+    $(document.body).on("click", "#save_test_btn", function(e) {
+        e.stopPropagation();
+        var current_template = JSON.parse(window.editor.get().text);
+        const testName = $("#save_test_name").val();
+        if (testName == "") {
+            alert("Set a name for test data set.");
+            $("#save_test_name").focus();
+            return;
+        }
+        if (current_template.testData == null) {
+            current_template.testData = {}
+        }
+
+        current_template.testData[testName] = {
+            'variables': {{ params | tojson }},
+            'results': {{ records | tojson }}
+        }
+        current_template.testData[testName].variables.group = {{ group_values | tojson }}
+        for(k in current_template.testData[testName].variables) {
+            if (current_template.testData[testName].variables[k] == '') {
+                delete current_template.testData[testName].variables[k];
+            }
+        }
+        window.editor.set({'text': JSON.stringify(current_template, null, 2)});
+        updateTestDropDown();
+    });
+    {% endif %}
+    $(document.body).on("change", ".group-checkbox", function(e) {
+        updateVariableVisibility();
+    });
+    $(document.body).on("change", ".param-input, .param-input-cbx", function(e) {
+        $("#tbl_records_and_errors").hide();
+    });
+    $(document.body).on("keydown", ".param-input", function(e) {
+        $("#tbl_records_and_errors").hide();
+    });
+    $(document.body).on("change", "#test_selection", function(e) {
+        $("#tbl_records_and_errors").hide();
+        $(".param-input").val("");
+        $("#param_domain").val("example.com");
+        $(".param-input-cbx").prop('checked', false);
+        var current_template = JSON.parse(window.editor.get().text);
+        if (current_template.testData != null) {
+            select = $("#test_selection").find(":selected").val();
+            if (select in current_template.testData && current_template.testData[select].variables != null) {
+                for (k in current_template.testData[select].variables)
+                {
+                    $("#param_" + k).val(current_template.testData[select].variables[k]);
+                }
+                if ("group" in current_template.testData[select].variables) {
+                    for (g in current_template.testData[select].variables.group) {
+                        $("#group-" + current_template.testData[select].variables.group[g]).prop('checked', true);
+                    }
+                }
+            }
+        }
+        updateVariableVisibility();
+    });
+    const updateTestDropDown = function() {
+        var current_template = JSON.parse(window.editor.get().text);
+        if (current_template.testData != null) {
+            select = $("#test_selection")[0];
+            $(".test-selection-option").remove();
+            for(k in current_template.testData) {
+                const option = document.createElement('option')
+                option.innerHTML = k
+                option.setAttribute("value", k)
+                option.setAttribute("class", "test-selection-option")
+                select.appendChild(option)
+            };
+        }
+    }
+    const updateVariableVisibility = function() {
+        const all_groups = {{ groups | tojson }};
+        var_inputs = $(".variable-input")
+        var any_grp_selected = false;
+        for (grp in all_groups) {
+            if ($("#group-" + all_groups[grp])[0].checked) {
+                any_grp_selected = true;
+                break;
+            }
+        }
+
+        for (i = 0; i < var_inputs.length; i++) {
+            input_field = var_inputs[i];
+            var show = false;
+            var any_data = false;
+            if (any_grp_selected) {
+                for (grp in all_groups) {
+                    if (input_field.getAttribute("data-group-" + all_groups[grp]) != null) {
+                        any_data = true;
+                        val = $("#group-" + all_groups[grp])[0].checked;
+                        input_field.setAttribute("data-group-" + all_groups[grp], val);
+                        show |= val
+                    }
+                }
+                input_field.hidden = !show && any_data;
+            }
+            else {
+                input_field.hidden = false;
+            }
+        }
+    }
 </script>
 {% endblock %}
 {% block modals %}
