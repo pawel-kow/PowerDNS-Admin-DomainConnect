@@ -1,8 +1,13 @@
-{% extends "base.html" %}
+{% if free_base_template == True %}
+    {% extends "base_open.html" %}
+{% else %}
+    {% extends "base.html" %}
+{% endif %}
 {% set active_page = "admin_domain_template" %}
 {% block title %}<title xmlns="http://www.w3.org/1999/html">Edit Template - {{ SITE_NAME }}</title>{% endblock %}
 
 {% block dashboard_stat %}
+{% if free_base_template == False %}
 <section class="content-header">
     <h1>
         Edit Domain Connect template <small>{{ template.providerId }} / {{ template.serviceId }}</small>
@@ -15,6 +20,7 @@
         <li class="active">{{ template.serviceId }}</li>
     </ol>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -23,10 +29,11 @@
         <div class="col-xs-12">
             <div class="box">
                 <div class="box-header">
-                    <h3 class="box-title">Manage Template Records for {{ template.providerId }} / {{ template.serviceId}}</h3>
+                    <h3 class="box-title">Template for {{ template.providerId }} / {{ template.serviceId}}</h3>
                 </div>
+                {% if free_base_template == False %}
                 <div class="box-body">
-                    {% if can_access_domain(template.providerId) or new %}
+                    {% if new or can_access_domain(template.providerId)%}
                     <button type="button" class="btn btn-flat btn-primary pull-right button_apply_changes" id="{{ template.providerId }}.{{ template.serviceId }}">
                         Apply Changes&nbsp;<i class="fa fa-floppy-o"></i>
                     </button>
@@ -34,6 +41,7 @@
                     &nbsp;
                     {% endif %}
                 </div>
+                {% endif %}
                 <div class="box-body">
                     <div id="jsoneditor"></div>
                 </div>
@@ -55,7 +63,7 @@
 
                 <div class="box-body">
                     <button type="button" class="btn btn-flat btn-primary pull-right button_reload_params">
-                        Reload Params&nbsp;<i class="fa fa-floppy-o"></i>
+                        Check&nbsp;template<i class="fa fa-floppy-o"></i>
                     </button>
                 </div>
                 <div class="box-body">
@@ -63,6 +71,13 @@
                         <option value="<clear>">-----</option>
                     </select>
                 </div>
+                {% if error %}
+                    <!-- Error Alert -->
+                    <div class="alert alert-danger show" id="tbl_records_and_errors">
+                        <strong>Error!</strong> A problem has been occurred while submitting your data: {{ error }}
+                    </div>
+                {% endif %}
+
                 <form id="variable_post" method="POST">
                     <input type="hidden" name="_template" id="variable_post_template"/>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
@@ -99,13 +114,12 @@
                     </div>
                     <div class="box-body">
                         <button type="button" class="btn btn-flat btn-primary pull-right button_submit_params">
-                            Test Template&nbsp;<i class="fa fa-floppy-o"></i>
+                            Test&nbsp;apply&nbsp;template&nbsp;<i class="fa fa-floppy-o"></i>
                         </button>
                     </div>
                 </form>
-                {% if records or error %}
+                {% if records %}
                 <div class="box-body" id="tbl_records_and_errors">
-                    {% if records %}
                     <table id="tbl_records" class="table table-bordered table-striped">
                         <thead>
                             <tr>
@@ -142,13 +156,6 @@
                             Add as test&nbsp;<i class="fa fa-floppy-o"></i>
                         </button>
                     </div>
-                    {% endif %}
-                    {% if error %}
-                    <!-- Error Alert -->
-                    <div class="alert alert-danger show">
-                        <strong>Error!</strong> A problem has been occurred while submitting your data: {{ error }}
-                    </div>
-                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -187,7 +194,7 @@
             navigationBar: false,
             content: obj,
             focus: false
-            {% if not(can_access_domain(template.providerId) or new) %}
+            {% if not(new or can_access_domain(template.providerId)) %}
             ,readOnly: true
             {% endif %}
           }
