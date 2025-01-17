@@ -2,17 +2,63 @@ version: "3"
 
 services:
   app:
-    image: ngoduykhanh/powerdns-admin:latest
+    image: powerdns-admin-dc
     container_name: powerdns_admin
-    ports:
-      - "9191:80"
     logging:
       driver: json-file
       options:
         max-size: 50m
     environment:
-      - SQLALCHEMY_DATABASE_URI=mysql://pda:changeme@host.docker.internal/pda
+      - SQLALCHEMY_DATABASE_URI=mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@mysql/${MARIADB_DATABASE}
       - GUNICORN_TIMEOUT=60
       - GUNICORN_WORKERS=2
       - GUNICORN_LOGLEVEL=DEBUG
       - OFFLINE_MODE=False # True for offline, False for external resources
+      - PDNS_API_KEY=${PDNS_API_KEY}
+      - PDNS_DEFAULT_SOA_NAME=example.com # Replace with your default SOA name
+      - PDNS_URL=http://pdns:8081
+      - PDNS_VERSION=4.8.4 # Set your correct PowerDNS version
+    depends_on:
+      - mysql
+      - pdns
+    restart: always
+
+  mysql:
+    image: mariadb:lts
+    container_name: mysql
+    command: --transaction-isolation=READ-COMMITTED
+    volumes:
+      - ./mysql-data:/var/lib/mysql # Mount your data volume here
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+    restart: always
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 5s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    
+  pdns:
+    image: powerdns/pdns-auth-49
+    container_name: pdns
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    volumes:
+      - ./pdns-data:/var/lib/powerdns
+    environment:
+      - PDNS_AUTH_API_KEY=${PDNS_API_KEY}
+      - DEBUG_CONFIG=no
+    restart: always
+
+networks:
+  default:
+    name: nginx-certbot_default
+    external: true
+
+#volumes:
+#  mysql-data:
