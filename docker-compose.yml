@@ -3,6 +3,9 @@ version: "3"
 services:
   app:
     image: powerdns-admin-dc
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     container_name: powerdns_admin
     logging:
       driver: json-file
@@ -18,14 +21,19 @@ services:
       - PDNS_DEFAULT_SOA_NAME=example.com # Replace with your default SOA name
       - PDNS_URL=http://pdns:8081
       - PDNS_VERSION=4.8.4 # Set your correct PowerDNS version
+    volumes:
+      - ../Templates:/app/DomainConnectTemplates # Mount template repository here
     depends_on:
-      - mysql
-      - pdns
+      mysql:
+        condition: service_healthy
+      pdns:
+        condition: service_healthy
     restart: always
 
   mysql:
     image: mariadb:lts
     container_name: mysql
+    user: "1002:1002"
     command: --transaction-isolation=READ-COMMITTED
     volumes:
       - ./mysql-data:/var/lib/mysql # Mount your data volume here
@@ -54,6 +62,13 @@ services:
       - PDNS_AUTH_API_KEY=${PDNS_API_KEY}
       - DEBUG_CONFIG=no
     restart: always
+    healthcheck:
+      test: >
+        pdnsutil create-zone random.zone.internal && pdnsutil delete-zone random.zone.internal
+        || exit 1
+      start_period: 5s
+      interval: 60s
+
 
 networks:
   default:

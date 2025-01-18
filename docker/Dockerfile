@@ -73,11 +73,13 @@ RUN git clone https://github.com/Domain-Connect/Templates.git && \
 FROM alpine:3.17
 
 ENV FLASK_APP=/app/powerdnsadmin/__init__.py \
-    USER=pda
+    USER=pda \
+    UID=1001 \
+    GID=1001
 
 RUN apk add --no-cache dos2unix mariadb-connector-c postgresql-client py3-gunicorn py3-psycopg2 xmlsec tzdata libcap libldap && \
-    addgroup -S ${USER} && \
-    adduser -S -D -G ${USER} ${USER} && \
+    addgroup --gid ${UID} -S ${USER} && \
+    adduser --uid ${GID} -S -D -G ${USER} ${USER} && \
     mkdir /data && \
     chown ${USER}:${USER} /data && \
     setcap cap_net_bind_service=+ep $(readlink -f /usr/bin/python3) && \
