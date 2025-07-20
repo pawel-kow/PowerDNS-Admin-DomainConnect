@@ -174,8 +174,8 @@
         delete data.$schema;
         delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-protocols'];
         delete data.definitions.DomainConnectTemplate.properties.logoUrl['qt-uri-extensions'];
-        data.definitions.TTL.anyOf[0].type = "number";
-        delete data.definitions.TTL.anyOf[1].format;
+        //data.definitions.TTL.anyOf[0].type = "number";
+        //delete data.definitions.TTL.anyOf[1].format;
         var obj = {};
         // pretty formatting JSON
         {% if template_raw %}
