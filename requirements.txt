@@ -31,5 +31,5 @@ Jinja2==3.0.3
 itsdangerous==2.0.1
 werkzeug==2.0.3
 cryptography>=42.0.3
-git+https://github.com/Domain-Connect/DomainConnectApplyZone.git@v4.1.0#egg=domainconnectzone
+git+https://github.com/Domain-Connect/DomainConnectApplyZone.git@v4.2.0#egg=domainconnectzone
 Flask-WTF==1.0.1
