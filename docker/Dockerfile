@@ -1,5 +1,5 @@
-FROM alpine:3.13 AS builder
-LABEL maintainer="k@ndk.name"
+FROM alpine:3.17 AS builder
+LABEL maintainer="pdns@paulonet.eu"
 
 ARG BUILD_DEPENDENCIES="build-base \
     libffi-dev \
@@ -70,21 +70,23 @@ RUN git clone https://github.com/Domain-Connect/Templates.git && \
     cp -r /build/Templates /app/DomainConnectTemplates
 
 # Build image
-FROM alpine:3.13
+FROM alpine:3.17
 
 ENV FLASK_APP=/app/powerdnsadmin/__init__.py \
-    USER=pda
+    USER=pda \
+    UID=1001 \
+    GID=1001
 
-RUN apk add --no-cache dos2unix mariadb-connector-c postgresql-client py3-gunicorn py3-psycopg2 xmlsec tzdata libcap && \
-    addgroup -S ${USER} && \
-    adduser -S -D -G ${USER} ${USER} && \
+RUN apk add --no-cache dos2unix mariadb-connector-c postgresql-client py3-gunicorn py3-psycopg2 xmlsec tzdata libcap libldap && \
+    addgroup --gid ${UID} -S ${USER} && \
+    adduser --uid ${GID} -S -D -G ${USER} ${USER} && \
     mkdir /data && \
     chown ${USER}:${USER} /data && \
     setcap cap_net_bind_service=+ep $(readlink -f /usr/bin/python3) && \
     apk del libcap
 
 COPY --from=builder /usr/bin/flask /usr/bin/
-COPY --from=builder /usr/lib/python3.8/site-packages /usr/lib/python3.8/site-packages/
+COPY --from=builder /usr/lib/python3.10/site-packages /usr/lib/python3.10/site-packages/
 COPY --from=builder --chown=root:${USER} /app /app/
 COPY ./docker/entrypoint.sh /usr/bin/
 RUN dos2unix /usr/bin/entrypoint.sh

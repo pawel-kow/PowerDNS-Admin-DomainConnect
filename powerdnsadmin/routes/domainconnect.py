@@ -39,9 +39,92 @@ from domainconnectzone import (
 )
 
 from flask_wtf.csrf import generate_csrf, validate_csrf
-
 import secrets
 import string
+
+DEFAULT_TEMPLATE = {
+    "providerId": "<Enter providerId>",
+    "providerName": "<Enter providerName>",
+    "serviceId": "<Enter serviceId>",
+    "serviceName": "<Enter serviceName>",
+    "version": 1,
+    "logoUrl": "<Enter logoUrl>",
+    "description": "<Enter description>",
+    "variableDescription": "<Enter variableDescription>",
+    "syncBlock": False,
+    "syncPubKeyDomain": "<Enter syncPubKeyDomain>",
+    "syncRedirectDomain": "<Enter syncRedirectDomain>",
+    "warnPhishing": True,
+    "hostRequired": False,
+    "records": [
+        {
+            "type": "A",
+            "host": "@",
+            "pointsTo": "1.1.1.1",
+            "ttl": 3600
+        },
+        {
+            "type": "A",
+            "host": "@",
+            "pointsTo": "%a%",
+            "ttl": 3600
+        },
+        {
+            "type": "CNAME",
+            "host": "www",
+            "pointsTo": "@",
+            "ttl": 3600
+        },
+        {
+            "type": "CNAME",
+            "host": "sub",
+            "pointsTo": "%sub%.mydomain.com",
+            "ttl": 3600
+        },
+        {
+            "type": "CNAME",
+            "host": "%cnamehost%",
+            "pointsTo": "%sub%.mydomain.com",
+            "ttl": 3600
+        },
+        {
+            "type": "TXT",
+            "host": "@",
+            "data": "%txt%",
+            "ttl": 3600
+        },
+        {
+            "type": "SPFM",
+            "host": "@",
+            "spfRules": "include:spf.mydomain.com"
+        },
+        {
+            "type": "MX",
+            "host": "@",
+            "pointsTo": "1.1.1.2",
+            "priority": 0,
+            "ttl": 3600
+        },
+        {
+            "type": "MX",
+            "host": "@",
+            "pointsTo": "%mx%",
+            "priority": 0,
+            "ttl": 3600
+        },
+        {
+            "type": "SRV",
+            "service": "_sip",
+            "protocol": "_tls",
+            "port": 443,
+            "weight": 20,
+            "priority": 10,
+            "name": "@",
+            "target": "%target%",
+            "ttl": 3600
+        }
+    ]
+}
 
 dc_api_bp = Blueprint('domainconnect', __name__, url_prefix='/dc')
 
@@ -201,6 +284,7 @@ def load_records(rrsets):
     else:
         # Unsupported version
         abort(500)
+
 
 def dc_can_access_domain(domain_name):
     domain = Domain.query.filter(Domain.name == domain_name).first()
@@ -381,8 +465,6 @@ def templates():
 
 
 @dc_api_bp.route('/admin/templates/schema', methods=['GET'])
-@operator_role_or_allow_user_manage_dc_templates_required
-@login_required
 def template_schema():
     templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
     if templlist.schema is not None:
@@ -390,11 +472,16 @@ def template_schema():
     else:
         return abort(404)
 
+
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['POST'])
 @dc_api_bp.route('/admin/templates/new', methods=['POST'])
 @operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def template_edit_post(provider_id=None, service_id=None):
+    return template_edit_post_intern(provider_id=provider_id, service_id=service_id)
+
+
+def template_edit_post_intern(provider_id=None, service_id=None, free_editor=False):
     current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
     try:
         result = None
@@ -441,7 +528,9 @@ def template_edit_post(provider_id=None, service_id=None):
                            groups=groups,
                            group_values=request.form.getlist('group'),
                            group_variables=group_variables,
-                           records=result, error=error, templateerror=templateerror)
+                           records=result, error=error, templateerror=templateerror,
+                           free_base_template=free_editor
+    )
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>', methods=['GET'])
@@ -463,94 +552,33 @@ def template_edit(provider_id, service_id):
                            group_variables=group_variables)
 
 
+@dc_api_bp.route("/free/templateedit", methods=['GET'])
+def free_template_edit():
+    current_app.jinja_env.globals.update(can_access_domain=lambda _: False)
+    template = DEFAULT_TEMPLATE
+    groups = DomainConnectTemplates.get_group_ids(template)
+    group_variables = {}
+    for g in groups:
+        group_variables[g] = DomainConnectTemplates.get_variable_names(template, {}, g)
+    return render_template('dc_template_edit.html', new=True, template=template,
+                           params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}),
+                           groups=groups,
+                           group_values=[],
+                           group_variables=group_variables,
+                           free_base_template=True)
+
+
+@dc_api_bp.route("/free/templateedit", methods=['POST'])
+def free_template_edit_post():
+    return template_edit_post_intern(free_editor=True)
+
+
 @dc_api_bp.route('/admin/templates/new', methods=['GET'])
 @operator_role_or_allow_user_manage_dc_templates_required
 @login_required
 def template_new():
     current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
-    template = {
-        "providerId": "<Enter providerId>",
-        "providerName": "<Enter providerName>",
-        "serviceId": "<Enter serviceId>",
-        "serviceName": "<Enter serviceName>",
-        "version": 1,
-        "logoUrl": "<Enter logoUrl>",
-        "description": "<Enter description>",
-        "variableDescription": "<Enter variableDescription>",
-        "syncBlock": False,
-        "syncPubKeyDomain": "<Enter syncPubKeyDomain>",
-        "syncRedirectDomain": "<Enter syncRedirectDomain>",
-        "warnPhishing": True,
-        "hostRequired": False,
-        "records": [
-            {
-                "type": "A",
-                "host": "@",
-                "pointsTo": "1.1.1.1",
-                "ttl": 3600
-            },
-            {
-                "type": "A",
-                "host": "@",
-                "pointsTo": "%a%",
-                "ttl": 3600
-            },
-            {
-                "type": "CNAME",
-                "host": "www",
-                "pointsTo": "@",
-                "ttl": 3600
-            },
-            {
-                "type": "CNAME",
-                "host": "sub",
-                "pointsTo": "%sub%.mydomain.com",
-                "ttl": 3600
-            },
-            {
-                "type": "CNAME",
-                "host": "%cnamehost%",
-                "pointsTo": "%sub%.mydomain.com",
-                "ttl": 3600
-            },
-            {
-                "type": "TXT",
-                "host": "@",
-                "data": "%txt%",
-                "ttl": 3600
-            },
-            {
-                "type": "SPFM",
-                "host": "@",
-                "spfRules": "include:spf.mydomain.com"
-            },
-            {
-                "type": "MX",
-                "host": "@",
-                "pointsTo": "1.1.1.2",
-                "priority": 0,
-                "ttl": 3600
-            },
-            {
-                "type": "MX",
-                "host": "@",
-                "pointsTo": "%mx%",
-                "priority": 0,
-                "ttl": 3600
-            },
-            {
-                "type": "SRV",
-                "service": "_sip",
-                "protocol": "_tls",
-                "port": 443,
-                "weight": 20,
-                "priority": 10,
-                "name": "@",
-                "target": "%target%",
-                "ttl": 3600
-            }
-        ]
-    }
+    template = DEFAULT_TEMPLATE
     groups = DomainConnectTemplates.get_group_ids(template)
     group_variables = {}
     for g in groups:
