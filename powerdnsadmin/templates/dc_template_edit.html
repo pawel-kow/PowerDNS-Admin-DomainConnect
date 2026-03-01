@@ -96,7 +96,7 @@
                                         {{ k }}
                                     </label>
                                     <div>
-                                        <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9 param-input" value="{{ v }}"/>
+                                        <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9 param-input" value="{{ v if v is not none else '' }}"/>
                                     </div>
                                 </div>
                             {% else %}
@@ -156,6 +156,22 @@
                             Add as test&nbsp;<i class="fa fa-floppy-o"></i>
                         </button>
                     </div>
+                </div>
+                {% endif %}
+                {% if apply_state_token %}
+                {% set test_link = url_for('domainconnect.free_template_edit', token=apply_state_token, _external=True) %}
+                <div class="box-body" >
+                    <a href="{{ test_link }}" id="test-state-link">Link to this test</a>
+                    <button type="button" class="btn btn-xs btn-default"
+                            onclick="(function(btn){
+                                navigator.clipboard.writeText('{{ test_link }}').then(function(){
+                                    var orig = btn.innerHTML;
+                                    btn.innerHTML = '<i class=\'fa fa-check\'></i> Copied!';
+                                    setTimeout(function(){ btn.innerHTML = orig; }, 1500);
+                                });
+                            })(this)">
+                        <i class="fa fa-clipboard"></i> Copy link
+                    </button>
                 </div>
                 {% endif %}
             </div>

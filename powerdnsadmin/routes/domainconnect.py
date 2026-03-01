@@ -483,18 +483,19 @@ def template_edit_post(provider_id=None, service_id=None):
 
 def template_edit_post_intern(provider_id=None, service_id=None, free_editor=False):
     current_app.jinja_env.globals.update(can_access_domain=dc_can_access_domain)
+    result = None
+    error = None
+    templateerror = None
+    apply_state_token = None
+    variables = {}
+    groups = []
+    group_variables = {}
+    templ = templ = {
+        "providerId": None,
+        "serviceId": None,
+        "records": []
+    }
     try:
-        result = None
-        error = None
-        templateerror = None
-        variables = {}
-        groups = []
-        group_variables = {}
-        templ = templ = {
-            "providerId": None,
-            "serviceId": None,
-            "records": []
-        }
         templ = json.loads(request.form["_template"])
         templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
         templlist.validate_template(templ)
@@ -509,13 +510,33 @@ def template_edit_post_intern(provider_id=None, service_id=None, free_editor=Fal
         if request.form["_test_template"] == "true":
             try:
                 templlist.validate_template(templ)
+                _zone_records = []
+                _domain = request.form["domain"]
+                _host = request.form["host"]
+                _group_ids = request.form.getlist('group')
+                _ignore_signature = True
+                _multi_aware = True
                 dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ,
                                    redir_template_records=redir_template_records)
-                dc_apply_result = dc.apply_template(zone_records=[], domain=request.form["domain"],
-                                                    host=request.form["host"],
-                                                    group_ids=request.form.getlist('group'),
-                                                    params=request.form, ignore_signature=True, multi_aware=True)
-                result = transform_records_to_pdns_format(request.form["domain"], dc_apply_result[2])
+                dc_apply_result = dc.apply_template(zone_records=_zone_records, domain=_domain,
+                                                    host=_host,
+                                                    group_ids=_group_ids,
+                                                    params=request.form,
+                                                    ignore_signature=_ignore_signature,
+                                                    multi_aware=_multi_aware)
+                result = transform_records_to_pdns_format(_domain, dc_apply_result[2])
+                apply_state_token = encode_apply_state(
+                    template=templ,
+                    zone_records=_zone_records,
+                    domain=_domain,
+                    host=_host,
+                    group_ids=_group_ids,
+                    params={k: v for k, v in request.form.to_dict(flat=False).items()
+                            if not k.startswith('_')},
+                    ignore_signature=_ignore_signature,
+                    multi_aware=_multi_aware,
+                    dc_apply_result=[dc_apply_result[0], dc_apply_result[1], dc_apply_result[2]],
+                )
             except Exception as e:
                 error = f"{e}"
     except JSONDecodeError as jex:
@@ -529,7 +550,8 @@ def template_edit_post_intern(provider_id=None, service_id=None, free_editor=Fal
                            group_values=request.form.getlist('group'),
                            group_variables=group_variables,
                            records=result, error=error, templateerror=templateerror,
-                           free_base_template=free_editor
+                           free_base_template=free_editor,
+                           apply_state_token=apply_state_token
     )
 
 
@@ -555,6 +577,28 @@ def template_edit(provider_id, service_id):
 @dc_api_bp.route("/free/templateedit", methods=['GET'])
 def free_template_edit():
     current_app.jinja_env.globals.update(can_access_domain=lambda _: False)
+    token = request.args.get('token')
+    if token:
+        try:
+            state = decode_apply_state(token)
+            template = state["template"]
+            groups = DomainConnectTemplates.get_group_ids(template)
+            group_variables = {}
+            for g in groups:
+                group_variables[g] = DomainConnectTemplates.get_variable_names(template, state["params"], g)
+            return render_template('dc_template_edit.html', new=False,
+                                   template_raw=json.dumps(template, indent=2),
+                                   template=template,
+                                   params=DomainConnectTemplates.get_variable_names(template, state["params"]),
+                                   groups=groups,
+                                   group_values=state["group_ids"],
+                                   group_variables=group_variables,
+                                   records=transform_records_to_pdns_format(
+                                       state["domain"], state["dc_apply_result"][2]),
+                                   apply_state_token=token,
+                                   free_base_template=True)
+        except Exception as e:
+            current_app.logger.warning(f"free_template_edit: invalid token: {e}")
     template = DEFAULT_TEMPLATE
     groups = DomainConnectTemplates.get_group_ids(template)
     group_variables = {}
@@ -571,7 +615,6 @@ def free_template_edit():
 @dc_api_bp.route("/free/templateedit", methods=['POST'])
 def free_template_edit_post():
     return template_edit_post_intern(free_editor=True)
-
 
 @dc_api_bp.route('/admin/templates/new', methods=['GET'])
 @operator_role_or_allow_user_manage_dc_templates_required

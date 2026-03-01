@@ -1,5 +1,7 @@
 import re
+import gzip
 import traceback
+from base64 import b64encode, b64decode
 from flask import (
     jsonify, current_app
 )
@@ -13,7 +15,7 @@ from .utils import (
 )
 import json
 import urllib.parse as urlparse
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 
 class DomainConnectApplyException(Exception):
     pass
@@ -161,6 +163,46 @@ def apply_dc_template_to_zone(domain_name, dc_output, provider_id,
         current_app.logger.debug(traceback.format_exc())
         raise
  
+def encode_apply_state(template, zone_records, domain, host, group_ids,
+                       params, ignore_signature, multi_aware, dc_apply_result):
+    """Encode DomainConnect apply inputs and result into a compact URL-safe token.
+
+    The payload is a JSON object, gzip-compressed and base64url-encoded so it
+    can be embedded as a single query-string parameter.
+    """
+    # params may be a Werkzeug ImmutableMultiDict or similar mapping; convert
+    # to a plain dict of lists so it round-trips cleanly through JSON.
+    if hasattr(params, 'to_dict'):
+        params_serialisable = params.to_dict(flat=False)
+    else:
+        params_serialisable = dict(params)
+
+    payload = {
+        "template": template,
+        "zone_records": zone_records,
+        "domain": domain,
+        "host": host,
+        "group_ids": group_ids,
+        "params": params_serialisable,
+        "ignore_signature": ignore_signature,
+        "multi_aware": multi_aware,
+        "dc_apply_result": dc_apply_result,
+    }
+    raw = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+    compressed = gzip.compress(raw)
+    return b64encode(compressed).decode('ascii')
+
+
+def decode_apply_state(token):
+    """Decode a token produced by :func:`encode_apply_state`.
+
+    Returns the original payload dict.
+    """
+    compressed = b64decode(token)
+    raw = gzip.decompress(compressed)
+    return json.loads(raw.decode('utf-8'))
+
+
 def add_query_params(url, params):
     url_parts = list(urlparse.urlparse(url))
     query = dict(urlparse.parse_qsl(url_parts[4]))
