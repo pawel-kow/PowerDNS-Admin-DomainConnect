@@ -582,20 +582,23 @@ def free_template_edit():
         try:
             state = decode_apply_state(token)
             template = state["template"]
+            # params are stored as dict[str, list]; flatten to dict[str, str] for get_variable_names
+            flat_params = {k: v[0] if isinstance(v, list) else v for k, v in state["params"].items()}
             groups = DomainConnectTemplates.get_group_ids(template)
             group_variables = {}
             for g in groups:
-                group_variables[g] = DomainConnectTemplates.get_variable_names(template, state["params"], g)
+                group_variables[g] = DomainConnectTemplates.get_variable_names(template, flat_params, g)
             return render_template('dc_template_edit.html', new=False,
                                    template_raw=json.dumps(template, indent=2),
                                    template=template,
-                                   params=DomainConnectTemplates.get_variable_names(template, state["params"]),
+                                   params=DomainConnectTemplates.get_variable_names(template, flat_params),
                                    groups=groups,
                                    group_values=state["group_ids"],
                                    group_variables=group_variables,
                                    records=transform_records_to_pdns_format(
                                        state["domain"], state["dc_apply_result"][2]),
                                    apply_state_token=token,
+                                   apply_state_saved_at=state.get("saved_at"),
                                    free_base_template=True)
         except Exception as e:
             current_app.logger.warning(f"free_template_edit: invalid token: {e}")

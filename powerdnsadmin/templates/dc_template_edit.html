@@ -29,6 +29,9 @@
         <div class="col-xs-12">
             <div class="box">
                 <div class="box-header">
+                    {% if apply_state_saved_at %}
+                    <p class="text-muted"><small><i class="fa fa-clock-o"></i> Saved at: {{ apply_state_saved_at }}</small></p>
+                    {% endif %}
                     <h3 class="box-title">Template for {{ template.providerId }} / {{ template.serviceId}}</h3>
                 </div>
                 {% if free_base_template == False %}

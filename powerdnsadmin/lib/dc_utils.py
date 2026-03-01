@@ -2,6 +2,7 @@ import re
 import gzip
 import traceback
 from base64 import b64encode, b64decode
+from datetime import datetime, timezone
 from flask import (
     jsonify, current_app
 )
@@ -187,6 +188,7 @@ def encode_apply_state(template, zone_records, domain, host, group_ids,
         "ignore_signature": ignore_signature,
         "multi_aware": multi_aware,
         "dc_apply_result": dc_apply_result,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
     }
     raw = json.dumps(payload, separators=(',', ':')).encode('utf-8')
     compressed = gzip.compress(raw)
