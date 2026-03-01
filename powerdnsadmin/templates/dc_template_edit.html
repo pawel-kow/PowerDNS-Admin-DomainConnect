@@ -163,17 +163,42 @@
                 {% endif %}
                 {% if apply_state_token %}
                 {% set test_link = url_for('domainconnect.free_template_edit', token=apply_state_token, _external=True) %}
+                {% set _host_part = (params.host if params.host else "@") %}
+                {% set test_label = "Test " ~ template.providerId ~ "/" ~ template.serviceId ~ " " ~ (params.domain | default('', true)) ~ "/" ~ _host_part ~ " " ~ (apply_state_saved_at | default('', true)) %}
                 <div class="box-body" >
-                    <a href="{{ test_link }}" id="test-state-link">Link to this test</a>
+                    <a href="{{ test_link }}" id="test-state-link">{{ test_label }}</a>
+                    {% set _js_label = test_label | replace("'", "\\'") %}
+                    {% set _js_link  = test_link  | replace("'", "\\'") %}
                     <button type="button" class="btn btn-xs btn-default"
+                            title="Copy as rich link (Word, Confluence, Notion, GitHub)"
                             onclick="(function(btn){
-                                navigator.clipboard.writeText('{{ test_link }}').then(function(){
+                                var url  = '{{ _js_link }}';
+                                var label = '{{ _js_label }}';
+                                // text/html only — GitHub converts <a> to [label](url) Markdown;
+                                // adding text/plain caused double-links because GitHub consumed both.
+                                var item = new ClipboardItem({
+                                    'text/plain': new Blob([url], {type: 'text/plain'}),
+                                    'text/html': new Blob(['<a href=\'' + url + '\'>' + label + '</a>'], {type: 'text/html'})
+                                });
+                                navigator.clipboard.write([item]).then(function(){
                                     var orig = btn.innerHTML;
                                     btn.innerHTML = '<i class=\'fa fa-check\'></i> Copied!';
                                     setTimeout(function(){ btn.innerHTML = orig; }, 1500);
                                 });
                             })(this)">
                         <i class="fa fa-clipboard"></i> Copy link
+                    </button>
+                    <button type="button" class="btn btn-xs btn-default"
+                            title="Copy as Markdown link (GitHub)"
+                            onclick="(function(btn){
+                                var md = '[{{ _js_label }}]({{ _js_link }})';
+                                navigator.clipboard.writeText(md).then(function(){
+                                    var orig = btn.innerHTML;
+                                    btn.innerHTML = '<i class=\'fa fa-check\'></i> Copied!';
+                                    setTimeout(function(){ btn.innerHTML = orig; }, 1500);
+                                });
+                            })(this)">
+                        <i class="fa fa-github"></i> Copy Markdown
                     </button>
                 </div>
                 {% endif %}

@@ -588,7 +588,7 @@ def free_template_edit():
             group_variables = {}
             for g in groups:
                 group_variables[g] = DomainConnectTemplates.get_variable_names(template, flat_params, g)
-            return render_template('dc_template_edit.html', new=False,
+            return render_template('dc_template_edit.html', new=True,
                                    template_raw=json.dumps(template, indent=2),
                                    template=template,
                                    params=DomainConnectTemplates.get_variable_names(template, flat_params),
