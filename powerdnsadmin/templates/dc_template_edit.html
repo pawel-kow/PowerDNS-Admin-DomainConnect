@@ -86,14 +86,49 @@
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
                     <input type="hidden" name="_test_template" id="variable_test_template" value="false"/>
                     <div class="box-body">
+                        <div class="box-header">
+                            <h4>Apply request parameters:</h4>
+                        </div>
+                        <div class="row variable-input">
+                            <label class="col-xs-2" for="param_domain">
+                                Domain:
+                            </label>
+                            <div>
+                                <input type="text" id="param_domain" name="domain" class="input col-xs-9 param-input" value="{{ params['domain'] }}"/>
+                            </div>
+                        </div>
+                        <div class="row variable-input">
+                            <label class="col-xs-2" for="param_host">
+                                Host:
+                            </label>
+                            <div>
+                                <input type="text" id="param_host" name="host" class="input col-xs-9 param-input" value="{{ params['host'] }}"/>
+                            </div>
+                        </div>
+                        {% if groups %}
+                                <h5>Groups:</h5>
+                                {% for g in groups %}
+                                    <div class="row">
+                                        <label class="col-xs-2" for="group-{{ g }}">{{ g }}</label>
+                                        <div>
+                                            <input type="checkbox" class="input col-xs-1 group-checkbox param-input-cbx" id="group-{{ g }}" name="group" value="{{ g }}" {% if g in group_values %}checked{% endif %} >
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                        {% endif %}
+                    </div>
+                    <div class="box-body">
+                        <div class="box-header">
+                            <h4>Template variables:</h4>
+                        </div>
                         {% for k, v in params.items() %}
-                            {% if k != "group" %}
+                            {% if k not in ['domain', 'host', 'group'] %}
                                 <div class="row variable-input"
-                                     {% for gk, gv in group_variables.items() %}
+                                    {% for gk, gv in group_variables.items() %}
                                         {% if k in gv %}
                                             data-group-{{ gk }}="{% if gk in group_values %}true{% else %}false{% endif %}"
                                         {% endif %}
-                                     {% endfor %}
+                                    {% endfor %}
                                 >
                                     <label class="col-xs-2" for="param_{{ k }}">
                                         {{ k }}
@@ -102,17 +137,7 @@
                                         <input type="text" id="param_{{ k }}" name="{{ k }}" class="input col-xs-9 param-input" value="{{ v if v is not none else '' }}"/>
                                     </div>
                                 </div>
-                            {% else %}
-                                {% for g in groups %}
-                                    <div class="row">
-                                        <label class="col-xs-2" for="group-{{ g }}">Group {{ g }}</label>
-                                        <div>
-                                            <input type="checkbox" class="input col-xs-1 group-checkbox param-input-cbx" id="group-{{ g }}" name="group" value="{{ g }}" {% if g in group_values %}checked{% endif %} >
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                                <hr>
-                        {% endif %}
+                            {% endif %}
                         {% endfor %}
                     </div>
                     <div class="box-body">
