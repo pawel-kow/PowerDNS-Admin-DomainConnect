@@ -496,6 +496,14 @@ def template_edit_post_intern(provider_id=None, service_id=None, free_editor=Fal
         "records": []
     }
     try:
+        _testdata_raw = request.form.get("_testdata", "{}")
+        try:
+            testdata = json.loads(_testdata_raw)
+        except (ValueError, TypeError):
+            testdata = {}
+    except Exception:
+        testdata = {}
+    try:
         templ = json.loads(request.form["_template"])
         templlist = DomainConnectTemplates(template_path=Setting().get('dc_template_folder'))
         templlist.validate_template(templ)
@@ -536,6 +544,7 @@ def template_edit_post_intern(provider_id=None, service_id=None, free_editor=Fal
                     ignore_signature=_ignore_signature,
                     multi_aware=_multi_aware,
                     dc_apply_result=[dc_apply_result[0], dc_apply_result[1], dc_apply_result[2]],
+                    testdata=testdata,
                 )
             except Exception as e:
                 error = f"{e}"
@@ -551,7 +560,8 @@ def template_edit_post_intern(provider_id=None, service_id=None, free_editor=Fal
                            group_variables=group_variables,
                            records=result, error=error, templateerror=templateerror,
                            free_base_template=free_editor,
-                           apply_state_token=apply_state_token
+                           apply_state_token=apply_state_token,
+                           testdata=testdata,
     )
 
 
@@ -567,11 +577,19 @@ def template_edit(provider_id, service_id):
     group_variables = {}
     for g in groups:
         group_variables[g] = DomainConnectTemplates.get_variable_names(template, {}, g)
+    testdata = {}
+    testdata_param = request.args.get('testdata')
+    if testdata_param:
+        try:
+            testdata = json.loads(testdata_param)
+        except (ValueError, TypeError):
+            pass
     return render_template('dc_template_edit.html', new=False, template=template,
                            params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}),
                            groups=groups,
                            group_values=[],
-                           group_variables=group_variables)
+                           group_variables=group_variables,
+                           testdata=testdata)
 
 
 @dc_api_bp.route("/free/templateedit", methods=['GET'])
@@ -599,9 +617,17 @@ def free_template_edit():
                                        state["domain"], state["dc_apply_result"][2]),
                                    apply_state_token=token,
                                    apply_state_saved_at=state.get("saved_at"),
+                                   testdata=state.get("testdata", {}),
                                    free_base_template=True)
         except Exception as e:
             current_app.logger.warning(f"free_template_edit: invalid token: {e}")
+    testdata = {}
+    testdata_param = request.args.get('testdata')
+    if testdata_param:
+        try:
+            testdata = json.loads(testdata_param)
+        except (ValueError, TypeError):
+            pass
     template = DEFAULT_TEMPLATE
     groups = DomainConnectTemplates.get_group_ids(template)
     group_variables = {}
@@ -612,6 +638,7 @@ def free_template_edit():
                            groups=groups,
                            group_values=[],
                            group_variables=group_variables,
+                           testdata=testdata,
                            free_base_template=True)
 
 
@@ -629,11 +656,19 @@ def template_new():
     group_variables = {}
     for g in groups:
         group_variables[g] = DomainConnectTemplates.get_variable_names(template, {}, g)
+    testdata = {}
+    testdata_param = request.args.get('testdata')
+    if testdata_param:
+        try:
+            testdata = json.loads(testdata_param)
+        except (ValueError, TypeError):
+            pass
     return render_template('dc_template_edit.html', new=True, template=template,
                            params=DomainConnectTemplates.get_variable_names(template, {'domain': 'example.com'}),
                            groups=groups,
                            group_values=[],
-                           group_variables=group_variables)
+                           group_variables=group_variables,
+                           testdata=testdata)
 
 
 @dc_api_bp.route('/admin/templates/providers/<string:provider_id>/services/<string:service_id>/save', methods=['POST'])

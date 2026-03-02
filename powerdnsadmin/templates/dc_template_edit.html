@@ -85,6 +85,7 @@
                     <input type="hidden" name="_template" id="variable_post_template"/>
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
                     <input type="hidden" name="_test_template" id="variable_test_template" value="false"/>
+                    <input type="hidden" name="_testdata" id="variable_post_testdata" value='{{ testdata | default({}) | tojson }}'/>
                     <div class="box-body">
                         <div class="box-header">
                             <h4>Apply request parameters:</h4>
@@ -177,11 +178,14 @@
                         </tbody>
                     </table>
                     <div class="box-body">
-                        <div class="col col-xs-7">&nbsp;</div>
+                        <div class="col col-xs-6">&nbsp;</div>
                         <input type="text" id="save_test_name" class="input col-xs-2">
                         <div class="col col-xs-1">&nbsp;</div>
                         <button type="button" id="save_test_btn" class="btn btn-flat btn-primary col-xs-2">
-                            Add as test&nbsp;<i class="fa fa-floppy-o"></i>
+                            Save&nbsp;<i class="fa fa-floppy-o"></i>
+                        </button>
+                        <button type="button" id="delete_test_btn" class="btn btn-flat btn-danger col-xs-1" style="display:none">
+                            <i class="fa fa-trash"></i>
                         </button>
                     </div>
                 </div>
@@ -327,28 +331,27 @@
     {% if params and records %}
     $(document.body).on("click", "#save_test_btn", function(e) {
         e.stopPropagation();
-        var current_template = JSON.parse(window.editor.get().text);
         const testName = $("#save_test_name").val();
         if (testName == "") {
             alert("Set a name for test data set.");
             $("#save_test_name").focus();
             return;
         }
-        if (current_template.testData == null) {
-            current_template.testData = {}
-        }
-
-        current_template.testData[testName] = {
-            'variables': {{ params | tojson }},
-            'results': {{ records | tojson }}
-        }
-        current_template.testData[testName].variables.group = {{ group_values | tojson }}
-        for(k in current_template.testData[testName].variables) {
-            if (current_template.testData[testName].variables[k] == '') {
-                delete current_template.testData[testName].variables[k];
+        var testdata = JSON.parse($("#variable_post_testdata").val() || "{}");
+        if (!testdata.tests) testdata.tests = {};
+        var variables = {{ params | tojson }};
+        variables.group = {{ group_values | tojson }};
+        for (var k in variables) {
+            if (variables[k] === '') {
+                delete variables[k];
             }
         }
-        window.editor.set({'text': JSON.stringify(current_template, null, 2)});
+        testdata.tests[testName] = {
+            'variables': variables,
+            'results': {{ records | tojson }}
+        };
+        testdata.selected_test = testName;
+        $("#variable_post_testdata").val(JSON.stringify(testdata));
         updateTestDropDown();
     });
     {% endif %}
@@ -361,42 +364,75 @@
     $(document.body).on("keydown", ".param-input", function(e) {
         $("#tbl_records_and_errors").hide();
     });
+    const updateSaveTestBtnLabel = function() {
+        var testdata = JSON.parse($("#variable_post_testdata").val() || "{}");
+        var tests = testdata.tests || {};
+        var name = $("#save_test_name").val();
+        var exists = (name in tests);
+        var label = exists ? "Save" : "Add as test";
+        $("#save_test_btn").html(label + '&nbsp;<i class="fa fa-floppy-o"></i>');
+        $("#delete_test_btn").toggle(exists);
+    }
+    $(document.body).on("click", "#delete_test_btn", function(e) {
+        e.stopPropagation();
+        var name = $("#save_test_name").val();
+        var testdata = JSON.parse($("#variable_post_testdata").val() || "{}");
+        if (testdata.tests && name in testdata.tests) {
+            delete testdata.tests[name];
+        }
+        if (testdata.selected_test === name) {
+            delete testdata.selected_test;
+        }
+        $("#save_test_name").val("");
+        $("#variable_post_testdata").val(JSON.stringify(testdata));
+        updateTestDropDown();
+        updateSaveTestBtnLabel();
+    });
     $(document.body).on("change", "#test_selection", function(e) {
         $("#tbl_records_and_errors").hide();
         $(".param-input").val("");
         $("#param_domain").val("example.com");
         $(".param-input-cbx").prop('checked', false);
-        var current_template = JSON.parse(window.editor.get().text);
-        if (current_template.testData != null) {
-            select = $("#test_selection").find(":selected").val();
-            if (select in current_template.testData && current_template.testData[select].variables != null) {
-                for (k in current_template.testData[select].variables)
-                {
-                    $("#param_" + k).val(current_template.testData[select].variables[k]);
-                }
-                if ("group" in current_template.testData[select].variables) {
-                    for (g in current_template.testData[select].variables.group) {
-                        $("#group-" + current_template.testData[select].variables.group[g]).prop('checked', true);
-                    }
+        var testdata = JSON.parse($("#variable_post_testdata").val() || "{}");
+        var tests = testdata.tests || {};
+        var select = $("#test_selection").find(":selected").val();
+        testdata.selected_test = select;
+        $("#variable_post_testdata").val(JSON.stringify(testdata));
+        $("#save_test_name").val(select !== "<clear>" ? select : "");
+        updateSaveTestBtnLabel();
+        if (select in tests && tests[select].variables != null) {
+            for (var k in tests[select].variables) {
+                $("#param_" + k).val(tests[select].variables[k]);
+            }
+            if ("group" in tests[select].variables) {
+                for (var g in tests[select].variables.group) {
+                    $("#group-" + tests[select].variables.group[g]).prop('checked', true);
                 }
             }
         }
         updateVariableVisibility();
     });
     const updateTestDropDown = function() {
-        var current_template = JSON.parse(window.editor.get().text);
-        if (current_template.testData != null) {
-            select = $("#test_selection")[0];
-            $(".test-selection-option").remove();
-            for(k in current_template.testData) {
-                const option = document.createElement('option')
-                option.innerHTML = k
-                option.setAttribute("value", k)
-                option.setAttribute("class", "test-selection-option")
-                select.appendChild(option)
-            };
+        var testdata = JSON.parse($("#variable_post_testdata").val() || "{}");
+        var tests = testdata.tests || {};
+        var select = $("#test_selection")[0];
+        $(".test-selection-option").remove();
+        for (var k in tests) {
+            const option = document.createElement('option');
+            option.innerHTML = k;
+            option.setAttribute("value", k);
+            option.setAttribute("class", "test-selection-option");
+            select.appendChild(option);
+        }
+        if (testdata.selected_test) {
+            $("#test_selection").val(testdata.selected_test);
+            $("#save_test_name").val(testdata.selected_test);
+            updateSaveTestBtnLabel();
         }
     }
+    $(document.body).on("input", "#save_test_name", function() {
+        updateSaveTestBtnLabel();
+    });
     const updateVariableVisibility = function() {
         const all_groups = {{ groups | tojson }};
         var_inputs = $(".variable-input")

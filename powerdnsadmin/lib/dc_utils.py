@@ -165,7 +165,8 @@ def apply_dc_template_to_zone(domain_name, dc_output, provider_id,
         raise
  
 def encode_apply_state(template, zone_records, domain, host, group_ids,
-                       params, ignore_signature, multi_aware, dc_apply_result):
+                       params, ignore_signature, multi_aware, dc_apply_result,
+                       testdata=None):
     """Encode DomainConnect apply inputs and result into a compact URL-safe token.
 
     The payload is a JSON object, gzip-compressed and base64url-encoded so it
@@ -189,6 +190,7 @@ def encode_apply_state(template, zone_records, domain, host, group_ids,
         "multi_aware": multi_aware,
         "dc_apply_result": dc_apply_result,
         "saved_at": datetime.now(timezone.utc).isoformat(),
+        "testdata": testdata or {},
     }
     raw = json.dumps(payload, separators=(',', ':')).encode('utf-8')
     compressed = gzip.compress(raw)
