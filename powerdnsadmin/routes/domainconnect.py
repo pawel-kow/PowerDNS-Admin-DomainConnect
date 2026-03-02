@@ -646,6 +646,31 @@ def free_template_edit():
 def free_template_edit_post():
     return template_edit_post_intern(free_editor=True)
 
+
+@dc_api_bp.route("/free/update_testdata_token", methods=['POST'])
+def free_update_testdata_token():
+    try:
+        token = request.json.get('token')
+        testdata = request.json.get('testdata', {})
+        state = decode_apply_state(token)
+        state['testdata'] = testdata
+        new_token = encode_apply_state(
+            template=state['template'],
+            zone_records=state['zone_records'],
+            domain=state['domain'],
+            host=state['host'],
+            group_ids=state['group_ids'],
+            params=state['params'],
+            ignore_signature=state['ignore_signature'],
+            multi_aware=state['multi_aware'],
+            dc_apply_result=state['dc_apply_result'],
+            testdata=testdata,
+        )
+        new_url = url_for('domainconnect.free_template_edit', token=new_token, _external=True)
+        return jsonify({'token': new_token, 'url': new_url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
 @dc_api_bp.route('/admin/templates/new', methods=['GET'])
 @operator_role_or_allow_user_manage_dc_templates_required
 @login_required

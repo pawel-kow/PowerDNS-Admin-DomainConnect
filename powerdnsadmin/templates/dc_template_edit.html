@@ -191,45 +191,25 @@
                 </div>
                 {% endif %}
                 {% if apply_state_token %}
-                {% set test_link = url_for('domainconnect.free_template_edit', token=apply_state_token, _external=True) %}
                 {% set _host_part = (params.host if params.host else "@") %}
                 {% set test_label = "Test " ~ template.providerId ~ "/" ~ template.serviceId ~ " " ~ (params.domain | default('', true)) ~ "/" ~ _host_part ~ " " ~ (apply_state_saved_at | default('', true)) %}
                 <div class="box-body" >
-                    <a href="{{ test_link }}" id="test-state-link">{{ test_label }}</a>
-                    {% set _js_label = test_label | replace("'", "\\'") %}
-                    {% set _js_link  = test_link  | replace("'", "\\'") %}
-                    <button type="button" class="btn btn-xs btn-default"
-                            title="Copy as rich link (Word, Confluence, Notion, GitHub)"
-                            onclick="(function(btn){
-                                var url  = '{{ _js_link }}';
-                                var label = '{{ _js_label }}';
-                                // text/html only — GitHub converts <a> to [label](url) Markdown;
-                                // adding text/plain caused double-links because GitHub consumed both.
-                                var item = new ClipboardItem({
-                                    'text/plain': new Blob([url], {type: 'text/plain'}),
-                                    'text/html': new Blob(['<a href=\'' + url + '\'>' + label + '</a>'], {type: 'text/html'})
-                                });
-                                navigator.clipboard.write([item]).then(function(){
-                                    var orig = btn.innerHTML;
-                                    btn.innerHTML = '<i class=\'fa fa-check\'></i> Copied!';
-                                    setTimeout(function(){ btn.innerHTML = orig; }, 1500);
-                                });
-                            })(this)">
+                    <a href="#" id="test-state-link">{{ test_label }}</a>
+                    <button type="button" class="btn btn-xs btn-default" id="copy-link-btn"
+                            title="Copy as rich link (Word, Confluence, Notion, GitHub)">
                         <i class="fa fa-clipboard"></i> Copy link
                     </button>
-                    <button type="button" class="btn btn-xs btn-default"
-                            title="Copy as Markdown link (GitHub)"
-                            onclick="(function(btn){
-                                var md = '[{{ _js_label }}]({{ _js_link }})';
-                                navigator.clipboard.writeText(md).then(function(){
-                                    var orig = btn.innerHTML;
-                                    btn.innerHTML = '<i class=\'fa fa-check\'></i> Copied!';
-                                    setTimeout(function(){ btn.innerHTML = orig; }, 1500);
-                                });
-                            })(this)">
+                    <button type="button" class="btn btn-xs btn-default" id="copy-markdown-btn"
+                            title="Copy as Markdown link (GitHub)">
                         <i class="fa fa-github"></i> Copy Markdown
                     </button>
                 </div>
+                <script>
+                    window._testStateToken = '{{ apply_state_token }}';
+                    window._testStateLabel = '{{ test_label | replace("'", "\\'") }}';
+                    window._testStateUrl = '{{ url_for('domainconnect.free_template_edit', token=apply_state_token, _external=True) | replace("'", "\\'") }}';
+                    window._updateTestdataTokenUrl = '{{ url_for('domainconnect.free_update_testdata_token') }}';
+                </script>
                 {% endif %}
             </div>
         </div>
@@ -353,6 +333,7 @@
         testdata.selected_test = testName;
         $("#variable_post_testdata").val(JSON.stringify(testdata));
         updateTestDropDown();
+        if (typeof refreshTestdataToken === 'function') refreshTestdataToken();
     });
     {% endif %}
     $(document.body).on("change", ".group-checkbox", function(e) {
@@ -387,6 +368,7 @@
         $("#variable_post_testdata").val(JSON.stringify(testdata));
         updateTestDropDown();
         updateSaveTestBtnLabel();
+        if (typeof refreshTestdataToken === 'function') refreshTestdataToken();
     });
     $(document.body).on("change", "#test_selection", function(e) {
         $("#tbl_records_and_errors").hide();
@@ -464,6 +446,47 @@
             }
         }
     }
+    {% if apply_state_token %}
+    function updateTestStateLink() {
+        $("#test-state-link").attr('href', window._testStateUrl);
+    }
+    function refreshTestdataToken() {
+        var testdata = JSON.parse($("#variable_post_testdata").val() || "{}");
+        $.ajax({
+            url: window._updateTestdataTokenUrl,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({token: window._testStateToken, testdata: testdata, _csrf_token: $('input[name="_csrf_token"]').val()}),
+            success: function(resp) {
+                window._testStateToken = resp.token;
+                window._testStateUrl = resp.url;
+                updateTestStateLink();
+            }
+        });
+    }
+    $(document.body).on("click", "#copy-link-btn", function() {
+        var url = window._testStateUrl;
+        var label = window._testStateLabel;
+        var item = new ClipboardItem({
+            'text/plain': new Blob([url], {type: 'text/plain'}),
+            'text/html': new Blob(['<a href="' + url + '">' + label + '</a>'], {type: 'text/html'})
+        });
+        navigator.clipboard.write([item]).then(function(){
+            var orig = $("#copy-link-btn").html();
+            $("#copy-link-btn").html('<i class="fa fa-check"></i> Copied!');
+            setTimeout(function(){ $("#copy-link-btn").html(orig); }, 1500);
+        });
+    });
+    $(document.body).on("click", "#copy-markdown-btn", function() {
+        var md = '[' + window._testStateLabel + '](' + window._testStateUrl + ')';
+        navigator.clipboard.writeText(md).then(function(){
+            var orig = $("#copy-markdown-btn").html();
+            $("#copy-markdown-btn").html('<i class="fa fa-check"></i> Copied!');
+            setTimeout(function(){ $("#copy-markdown-btn").html(orig); }, 1500);
+        });
+    });
+    updateTestStateLink();
+    {% endif %}
 </script>
 {% endblock %}
 {% block modals %}
