@@ -524,6 +524,13 @@ def template_edit_post_intern(provider_id=None, service_id=None, free_editor=Fal
                 _group_ids = request.form.getlist('group')
                 _ignore_signature = True
                 _multi_aware = True
+                _host_norm = _host.rstrip('.')
+                _domain_norm = _domain.rstrip('.')
+                if _host_norm == _domain_norm or _host_norm.endswith('.' + _domain_norm):
+                    raise ValueError(
+                        f"host '{_host}' must not contain the domain '{_domain}'; "
+                        f"use only the subdomain portion (e.g. 'foo' instead of 'foo.{_domain_norm}')"
+                    )
                 dc = DomainConnect(templ["providerId"], templ["serviceId"], template=templ,
                                    redir_template_records=redir_template_records)
                 dc_apply_result = dc.apply_template(zone_records=_zone_records, domain=_domain,
