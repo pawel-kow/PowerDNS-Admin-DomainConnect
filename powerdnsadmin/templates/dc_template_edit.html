@@ -192,7 +192,7 @@
                 {% endif %}
                 {% if apply_state_token %}
                 {% set _host_part = (params.host if params.host else "@") %}
-                {% set test_label = "Test " ~ template.providerId ~ "/" ~ template.serviceId ~ " " ~ (params.domain | default('', true)) ~ "/" ~ _host_part ~ " " ~ (apply_state_saved_at | default('', true)) %}
+                {% set test_label = "Test " ~ template.providerId ~ "/" ~ template.serviceId ~ " " ~ (params.domain | default('', true)) ~ "/" ~ _host_part %}
                 <div class="box-body" >
                     <a href="#" id="test-state-link">{{ test_label }}</a>
                     <button type="button" class="btn btn-xs btn-default" id="copy-link-btn"
