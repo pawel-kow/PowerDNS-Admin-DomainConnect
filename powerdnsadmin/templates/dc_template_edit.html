@@ -162,7 +162,7 @@
                                 {% for record in records %}
                                 <tr class="odd row_record">
                                     <td>
-                                        {{ (record.name,domain) | display_record_name | pretty_domain_name }}
+                                        {{ record.name | pretty_domain_name }}
                                     </td>
                                     <td>
                                         {{ record.type }}

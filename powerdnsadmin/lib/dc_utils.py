@@ -81,12 +81,12 @@ def transform_records_to_dc_format(domain_name, records):
     return [transform_record_to_dc_format(domain_name, x) for x in records]
 
 
-def transform_record_to_pdns_format(domain_name, record):
+def transform_record_to_pdns_format(domain_name, record, fqdn=False):
     ret = {
         "type": record["type"],
-        # "name": domain_name if record["name"] == "@" or record["name"] == "" else 
-        #     (record["name"] if record["name"].endswith(".") else f'{record["name"]}.{domain_name}'),
-        "name": record["name"],
+        "name": (f"{domain_name}." if record["name"] == "@" or record["name"] == "" else 
+             (record["name"] if record["name"].endswith(".") else f'{record["name"]}.{domain_name}.')) \
+                 if fqdn else record["name"],
         "ttl": record["ttl"] if "ttl" in record else 60
     }
     if record['type'] in ['REDIR301', 'REDIR302']:
@@ -106,8 +106,8 @@ def transform_record_to_pdns_format(domain_name, record):
     return ret
 
 
-def transform_records_to_pdns_format(domain_name, records):
-    ret = [transform_record_to_pdns_format(domain_name, x) for x in records]
+def transform_records_to_pdns_format(domain_name, records, fqdn=False):
+    ret = [transform_record_to_pdns_format(domain_name, x, fqdn) for x in records]
     todelete = []
     for i in range(0, len(ret)-1):
         for j in range(i+1, len(ret)-1):

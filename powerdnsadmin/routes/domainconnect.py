@@ -539,7 +539,7 @@ def template_edit_post_intern(provider_id=None, service_id=None, free_editor=Fal
                                                     params=request.form,
                                                     ignore_signature=_ignore_signature,
                                                     multi_aware=_multi_aware)
-                result = transform_records_to_pdns_format(_domain, dc_apply_result[2])
+                result = transform_records_to_pdns_format(_domain, dc_apply_result[2], True)
                 apply_state_token = encode_apply_state(
                     template=templ,
                     zone_records=_zone_records,
