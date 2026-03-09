@@ -598,7 +598,7 @@ def free_template_edit():
     token = request.args.get('token')
     if token:
         try:
-            state = decode_apply_state(token)
+            state = decode_apply_state(token, False) # TODO: change it to true eventually
             template = state["template"]
             # params are stored as dict[str, list]; flatten to dict[str, str] for get_variable_names
             flat_params = {k: v[0] if isinstance(v, list) else v for k, v in state["params"].items()}
@@ -652,7 +652,7 @@ def free_update_testdata_token():
     try:
         token = request.json.get('token')
         testdata = request.json.get('testdata', {})
-        state = decode_apply_state(token)
+        state = decode_apply_state(token, True)
         state['testdata'] = testdata
         new_token = encode_apply_state(
             template=state['template'],
